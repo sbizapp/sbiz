@@ -1,4 +1,4 @@
-# SBIZ.COM — HỒ SƠ CẤU HÌNH HẠ TẦNG
+# SBIZ.APP — HỒ SƠ CẤU HÌNH HẠ TẦNG
 
 **Ngày cập nhật:** 2026-10-22  
 **Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận và danh sách cần thu thập. Chưa xác nhận triển khai tài nguyên Cloudflare.
