@@ -1,6 +1,6 @@
 # SBIZ.APP — KẾ HOẠCH TỔNG THỂ SẢN PHẨM & KỊCH BẢN TRIỂN KHAI
 
-**Phiên bản:** 1.5  
+**Phiên bản:** 1.6  
 **Ngày:** 22/10/2026  
 **Trạng thái:** Kế hoạch tổng thể sản phẩm; chưa phải đặc tả kỹ thuật chi tiết.  
 **Quy tắc thực hiện:** Mỗi phân đoạn phải có kịch bản hành động chi tiết được viết và duyệt trước khi xây frontend/backend.
@@ -16,12 +16,65 @@ Ba trụ cột sản phẩm:
 
 ## 2. Giá thuê bao đã chốt
 
-- **USD 5/tháng**
-- **USD 50/năm**
+- **USD 50 cho mỗi năm thuê bao**.
+- Khách hàng được đăng ký trước **1 năm, 2 năm hoặc 3 năm**.
+- Tổng giá theo thời hạn: 1 năm = USD 50; 2 năm = USD 100; 3 năm = USD 150.
+- **Bỏ gói USD 5/tháng**; không tiếp tục hiển thị hoặc bán gói này.
 
-Đây là quyết định của chủ sản phẩm. Không tự ý thay đổi giá trong quá trình triển khai.
+Đây là quyết định mới của chủ sản phẩm, thay thế mức giá cũ trong phiên bản 1.5. Không tự ý thêm gói giá hoặc mức giảm giá khác.
 
-## 3. Các trạng thái tài khoản
+## 3. Đăng ký nhanh và đăng nhập
+
+### 3.1. Màn hình đầu tiên và ngôn ngữ
+
+- Địa chỉ mặc định: https://sbiz.app.
+- Màn hình đầu tiên có 5 nút chọn ngôn ngữ; tên mỗi ngôn ngữ được viết bằng chính ngôn ngữ đó: English, Tiếng Việt, Bahasa Indonesia, Español, Português.
+- Nếu khách không chọn ngôn ngữ, mặc định dùng luồng tiếng Anh.
+- Khi khách chọn ngôn ngữ khác, chuyển ngay sang URL và giao diện của luồng đó; ví dụ Tiếng Việt chuyển sang https://sbiz.app/vi.
+- Các thao tác tạo tài khoản và đăng nhập tiếp tục bằng ngôn ngữ đang chọn.
+
+### 3.2. Tạo tài khoản mới — luồng tối giản
+
+- Chỉ yêu cầu hai thông tin: email và slug.
+- Sau khi gửi đăng ký, hệ thống gửi email xác nhận.
+- Màn hình thông báo cho khách kiểm tra và xác nhận email.
+- Sau khi xác nhận email thành công, chuyển khách sang cửa đăng nhập của luồng ngôn ngữ đang sử dụng.
+- Không đưa việc nhập hồ sơ doanh nghiệp dài vào luồng đăng ký ban đầu. Việc thiết lập shop và quản trị dữ liệu thực hiện sau khi đăng nhập.
+- Quy tắc kiểm tra slug, slug trùng, email đã tồn tại, liên kết xác nhận hết hạn và gửi lại email phải được đặc tả trong kịch bản chi tiết trước khi triển khai.
+
+### 3.3. Đăng nhập tài khoản đã có
+
+- Khách chọn Login trên màn hình đầu tiên hoặc nút đăng nhập tương ứng trong luồng ngôn ngữ.
+- Màn hình đăng nhập và thông báo lỗi sử dụng đúng ngôn ngữ đang chọn.
+- Sau khi đăng nhập thành công, chuyển đến dashboard quản trị tài khoản/shop.
+- Trường đăng nhập, quy tắc khôi phục mật khẩu, phiên đăng nhập và bảo vệ chống lạm dụng phải được xác định trong kịch bản chi tiết.
+
+## 4. Dashboard quản trị — trung tâm sản phẩm
+
+Dashboard sau đăng nhập là khu vực quản trị trung tâm, không chỉ là trang chào mừng. Dashboard cần hiển thị dữ liệu động từ hệ thống, tối thiểu gồm:
+
+- Ngày đăng ký tài khoản/shop.
+- Trạng thái tài khoản và trạng thái xác minh doanh nghiệp.
+- Tên gói thuê bao, thời hạn đã mua, ngày bắt đầu và ngày hết hạn nếu có.
+- Trạng thái thanh toán/thuê bao và thông báo khi cần hành động.
+- Ngôn ngữ chính L1 và trạng thái ngôn ngữ thứ hai L2.
+- Các việc cần hoàn tất hoặc cảnh báo quan trọng.
+
+Dashboard cung cấp các nút chức năng chính để đi đến:
+
+- Quản trị website doanh nghiệp L1.
+- Quản trị website doanh nghiệp L2 (chỉ khả dụng khi quyền lợi thuê bao cho phép).
+- Quản trị trang sản phẩm/catalog.
+- Quản trị bảng giá sản phẩm.
+- Quản trị AI Training Base.
+- Quản trị báo giá và Proforma Invoice (PI).
+- Quản trị hồ sơ doanh nghiệp và xác minh.
+- Quản lý gói thuê bao và thanh toán.
+- Quản lý tài khoản và bảo mật.
+
+Các nút và dữ liệu hiển thị phải phản ánh quyền lợi thực tế của tài khoản; không hiển thị trạng thái thuê bao hoặc quyền lợi giả lập. Chi tiết bố cục desktop/mobile sẽ được chốt trong kịch bản UI/UX.
+
+## 5. Các trạng thái tài khoản
 
 ### Free
 - Dùng L1 (ngôn ngữ chính).
@@ -47,7 +100,7 @@ Ba trụ cột sản phẩm:
 - Các nội dung bị ẩn không được xuất hiện trong website công khai hoặc AI Training Base được công bố.
 - Khi thuê bao được khôi phục hợp lệ, mở lại quyền lợi theo trạng thái thuê bao đã xác minh.
 
-## 4. Quy tắc ngôn ngữ L1/L2
+## 6. Quy tắc ngôn ngữ L1/L2
 
 - Khi tạo shop, người dùng tự chọn **L1 — ngôn ngữ chính**. L1 là ngôn ngữ mặc định của website và báo giá.
 - L1 được giữ nguyên trong suốt vòng đời tài khoản, ở trạng thái Free, Free Active, trả phí active hoặc inactive.
@@ -57,7 +110,7 @@ Ba trụ cột sản phẩm:
 - Nhóm 5 ngôn ngữ chiến lược: English, Vietnamese, Indonesian, Spanish, Portuguese.
 - Website, AI Training Base, báo giá và PI phải tuân theo cấu hình ngôn ngữ của shop. Mỗi ngôn ngữ có template tài liệu tương ứng.
 
-## 5. AI Training Base
+## 7. AI Training Base
 
 AI Training Base là một lớp nội dung/hướng dẫn máy có thể truy cập, được tạo riêng cho từng shop từ dữ liệu có thẩm quyền trong sbiz: thông tin doanh nghiệp, địa chỉ, sản phẩm, thông số, giá, quy tắc bán hàng, ngôn ngữ và hành vi tư vấn.
 
@@ -67,7 +120,7 @@ Mỗi website có hai lớp nội dung:
 
 AI Training Base phải được sinh theo template chuẩn, đồng bộ với dữ liệu nguồn và nội dung được phép công khai. Khi L2 hoặc sản phẩm bị ẩn do hạ cấp, nội dung tương ứng phải bị loại khỏi phần AI Training Base công khai. Sitemap và structured data là lớp hỗ trợ, không thay thế AI Training Base. Không cam kết rằng mọi hệ thống AI đều sẽ thu thập hoặc tuân thủ nội dung.
 
-## 6. Báo giá và Proforma Invoice
+## 8. Báo giá và Proforma Invoice
 
 - Ngôn ngữ mặc định của báo giá là L1.
 - Thuê bao trả phí active có thể dùng L1 và L2.
@@ -76,7 +129,7 @@ AI Training Base phải được sinh theo template chuẩn, đồng bộ với 
 - Trường bắt buộc, thuế, chiết khấu, độ chính xác, làm tròn, ngày tháng, số báo giá và thời hạn hiệu lực phải được chốt trong kịch bản chi tiết trước khi xây dựng phân đoạn này.
 - Phân biệt rõ báo giá (quotation) và Proforma Invoice (PI).
 
-## 7. Paddle — thanh toán quốc tế
+## 9. Paddle — thanh toán quốc tế
 
 Tích hợp Paddle cho gói thuê bao USD 5/tháng và USD 50/năm. Kịch bản chi tiết phải xác định:
 - Checkout và liên kết tài khoản với customer/subscription trên Paddle.
@@ -86,7 +139,7 @@ Tích hợp Paddle cho gói thuê bao USD 5/tháng và USD 50/năm. Kịch bản
 - Hoàn tiền/chargeback và thuế/phí nếu áp dụng.
 - Không cấp quyền chỉ dựa vào việc trình duyệt quay về trang thành công; phải xác minh trạng thái từ nguồn tin cậy của Paddle.
 
-## 8. Tick xanh Verified by sbiz và hồ sơ doanh nghiệp
+## 10. Tick xanh Verified by sbiz và hồ sơ doanh nghiệp
 
 Tick xanh Verified by sbiz phải liên kết tới trang thông tin doanh nghiệp. Trang này thể hiện:
 - Ngày khởi tạo shop/doanh nghiệp trên sbiz.app.
@@ -96,7 +149,7 @@ Tick xanh Verified by sbiz phải liên kết tới trang thông tin doanh nghi�
 
 Cách công khai giấy đăng ký kinh doanh, bảo vệ thông tin nhạy cảm và quyền truy cập bản gốc phải được xác định trong kịch bản chi tiết; không mặc định công khai toàn bộ bản scan nếu chưa có quyết định.
 
-## 9. Hạ tầng và nền tảng
+## 11. Hạ tầng và nền tảng
 
 Hướng công nghệ dự kiến: Cloudflare Workers, D1, R2 và Cloudflare for SaaS cho custom domain. Cần xác minh hiện trạng domain, DNS, dịch vụ email và tài khoản Cloudflare trước khi cấu hình. Không tự ý thay đổi nameserver/DNS, tạo tài nguyên tính phí hoặc triển khai production khi chưa được chủ sản phẩm cho phép.
 
@@ -108,10 +161,10 @@ Email nghiệp vụ dự kiến:
 
 Các địa chỉ trên là danh sách dự kiến; việc tạo mailbox, chọn nhà cung cấp và cấu hình DNS email phải chờ chỉ đạo của chủ sản phẩm.
 
-## 10. Các phân đoạn cấp cao
+## 12. Các phân đoạn cấp cao
 
-### Phân đoạn 1 — Tài khoản và hồ sơ doanh nghiệp
-Đăng ký, đăng nhập, tạo shop, chọn L1, lưu ngày khởi tạo và quản lý hồ sơ cơ bản.
+### Phân đoạn 1 — Tài khoản, dashboard và hồ sơ doanh nghiệp
+Đăng ký nhanh bằng email và slug, xác nhận email, đăng nhập, dashboard quản trị trung tâm, tạo/thiết lập shop, chọn L1, lưu ngày khởi tạo và quản lý hồ sơ cơ bản.
 
 ### Phân đoạn 2 — Catalog và sản phẩm
 Tạo/sửa/quản lý sản phẩm, thứ tự sản phẩm, đơn vị tiền tệ cấp sản phẩm và quy tắc giới hạn công khai.
@@ -139,7 +192,7 @@ Quản trị, bảo mật, giám sát, sao lưu, kiểm thử xuyên luồng và
 
 Thứ tự trên là nhóm phân đoạn cấp cao; thứ tự triển khai cuối cùng phải được xác nhận qua dependency và kịch bản chi tiết.
 
-## 11. Mẫu bắt buộc cho kịch bản hành động từng phân đoạn
+## 13. Mẫu bắt buộc cho kịch bản hành động từng phân đoạn
 
 Trước khi bắt đầu frontend/backend của bất kỳ phân đoạn nào, phải viết và duyệt một kịch bản riêng gồm:
 1. Mục tiêu và phạm vi.
@@ -155,7 +208,7 @@ Trước khi bắt đầu frontend/backend của bất kỳ phân đoạn nào, 
 
 Không tự ý biến đề xuất thành quyết định sản phẩm. Không tuyên bố PASS khi chưa có bằng chứng.
 
-## 12. Các nội dung còn mở — chốt trong kịch bản phân đoạn
+## 14. Các nội dung còn mở — chốt trong kịch bản phân đoạn
 
 - Mốc tính 12 tháng, thời điểm gửi cảnh báo và chi tiết thời hạn kích hoạt Free Active.
 - Quyền lợi Verified đầy đủ, giới hạn sản phẩm và hành vi khi thuê bao đổi trạng thái.
@@ -167,7 +220,7 @@ Không tự ý biến đề xuất thành quyết định sản phẩm. Không t
 - Nhà cung cấp email, mailbox thực, định tuyến, SPF/DKIM/DMARC và quy trình gửi email.
 - Phạm vi MVP và dependency cuối cùng giữa các phân đoạn.
 
-## 13. Trạng thái thực hiện hiện tại
+## 15. Trạng thái thực hiện hiện tại
 
 - Repository GitHub: https://github.com/sbizapp/sbiz
 - README cơ bản đã được ghi lên nhánh main.
