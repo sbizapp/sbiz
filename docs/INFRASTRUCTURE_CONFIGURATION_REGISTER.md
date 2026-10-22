@@ -6,12 +6,17 @@
 ## 1. Thông tin đã xác nhận
 
 - Repository: https://github.com/sbizapp/sbiz
-- Domain: `sbiz.com` (chủ sản phẩm xác nhận đã mua domain trên Cloudflare).
+- Domain: `sbiz.app` (chủ sản phẩm xác nhận đã mua domain trên Cloudflare).
+- Domain registration status: `Active`.
+- Ngày hết hạn đăng ký: `2027-10-19`.
+- DNS: chủ sản phẩm xác nhận đang dùng cấu hình mặc định của Cloudflare; chưa có danh sách bản ghi DNS được kiểm tra.
 - Email đã được thiết lập theo xác nhận của chủ sản phẩm; domain suffix và danh sách địa chỉ mailbox thực tế cần xác minh, không suy ra từ domain website.
 - Email đăng nhập/tài khoản Cloudflare được cung cấp: `admin@vinarubber.com`.
 - Cloudflare Account ID: `7568b3c0e09d949e021c486fa8199b63`.
 - Workers.dev subdomain hiển thị trong Account details: `sbizapp.workers.dev` (chỉ ghi nhận; chưa khẳng định đã tạo Worker ứng dụng).
-- Zone ID, trạng thái zone và nameservers của `sbiz.com`: chưa được cung cấp/xác minh.
+- Zone ID của `sbiz.app`: `e2b836a598a4e275aeaa000ece31bc28` (do chủ sản phẩm cung cấp; chưa xác minh trực tiếp qua API).
+- Account ID: `7568b3c0e09d949e021c486fa8199b63` (do chủ sản phẩm cung cấp; chưa xác minh trực tiếp qua API).
+- Nameservers cụ thể và trạng thái zone trong Cloudflare Dashboard: chưa được cung cấp; ghi nhận riêng rằng domain đang theo cấu hình DNS mặc định Cloudflare.
 - Giá thuê bao đã chốt: USD 5/tháng hoặc USD 50/năm.
 - Hướng nền tảng ứng dụng: Cloudflare Workers, D1, R2; Cloudflare for SaaS cho custom domains; Paddle cho subscription billing quốc tế (theo kế hoạch tổng thể).
 - Chưa có bằng chứng trong hồ sơ này rằng Worker, D1, R2, Paddle hoặc môi trường production đã được tạo/cấu hình.
@@ -69,9 +74,10 @@ Tên hiển thị là đề xuất kỹ thuật, chưa phải quyết định th
 Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh:
 
 - Cloudflare Account ID: `7568b3c0e09d949e021c486fa8199b63` (do chủ sản phẩm cung cấp; chưa kiểm tra trực tiếp trong dashboard).
+- Zone ID của `sbiz.app`: `e2b836a598a4e275aeaa000ece31bc28` (do chủ sản phẩm cung cấp; chưa kiểm tra trực tiếp qua API).
 - Workers.dev subdomain hiển thị: `sbizapp.workers.dev`.
-- Zone ID của `sbiz.com`: chưa có.
-- Trạng thái zone và nameserver hiện tại: chưa có.
+- Domain registration status: `Active`; expiry: `2027-10-19`.
+- DNS đang theo cấu hình mặc định Cloudflare theo xác nhận của chủ sản phẩm; chưa kiểm tra từng record hoặc nameserver cụ thể.
 - Worker/service name được chọn.
 - Môi trường dự kiến: development, staging, production.
 - Nếu dùng R2: tên bucket, region/hint nếu có, và mục đích bucket.
@@ -94,8 +100,8 @@ Tài liệu chính thức về Worker variables/secrets:
 
 ### A. Cloudflare identity
 1. Account ID đã cung cấp: `7568b3c0e09d949e021c486fa8199b63`.
-2. Zone ID cho `sbiz.com`.
-3. Trạng thái zone: Active hay còn chờ nameserver/verification.
+2. Zone ID đã cung cấp: `e2b836a598a4e275aeaa000ece31bc28`.
+3. Xác minh trạng thái zone trong Dashboard/API và thu thập nameserver cụ thể nếu cần.
 4. Có sẵn Worker, D1 database, R2 bucket hoặc Cloudflare for SaaS configuration nào chưa? Nếu có, cung cấp tên và ID; không tạo trùng tài nguyên.
 
 ### B. SMTP
@@ -127,11 +133,13 @@ Tài liệu chính thức về Worker variables/secrets:
 
 ## 6. Trạng thái
 
-- [x] Chủ sản phẩm xác nhận đã mua domain `sbiz.com` trên Cloudflare.
+- [x] Chủ sản phẩm xác nhận domain `sbiz.app` đã mua trên Cloudflare, registration status Active, hết hạn 2027-10-19.
+- [x] Chủ sản phẩm xác nhận DNS đang theo cấu hình mặc định của Cloudflare.
 - [x] Ghi nhận Account ID và workers.dev subdomain do chủ sản phẩm cung cấp (chưa xác minh trực tiếp trên dashboard).
 - [x] Chủ sản phẩm xác nhận đã thiết lập email; địa chỉ mailbox/domain suffix và app password theo từng mailbox cần xác minh.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
-- [ ] Cloudflare Account ID được xác minh trực tiếp trên dashboard và Zone ID được thu thập.
+- [x] Account ID và Zone ID được chủ sản phẩm cung cấp.
+- [ ] Account ID, Zone ID và trạng thái zone được xác minh trực tiếp trên dashboard/API.
 - [ ] Tài nguyên Worker/D1/R2 hiện có được kiểm kê.
 - [ ] Cấu hình secret được thiết lập an toàn theo từng môi trường.
 - [ ] SMTP được kiểm thử trong runtime thực tế.
