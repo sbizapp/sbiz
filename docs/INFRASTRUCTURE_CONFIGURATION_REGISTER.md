@@ -10,6 +10,7 @@
 - Domain registration status: `Active`.
 - Ngày hết hạn đăng ký: `2027-10-19`.
 - DNS: chủ sản phẩm xác nhận đang dùng cấu hình mặc định của Cloudflare; chưa có danh sách bản ghi DNS được kiểm tra.
+- Nhà cung cấp email: Yandex Mail; chủ sản phẩm xác nhận hạ tầng đã thiết lập và sẵn sàng gửi email qua SMTP. Việc gửi thư từ Cloudflare Workers vẫn cần kiểm thử trong runtime thực tế.
 - Các mailbox do chủ sản phẩm xác nhận:
   - Admin: `admin@sbiz.app`
   - Billing: `billing@sbiz.app`
@@ -142,6 +143,7 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Chủ sản phẩm xác nhận domain `sbiz.app` đã mua trên Cloudflare, registration status Active, hết hạn 2027-10-19.
 - [x] Chủ sản phẩm xác nhận DNS đang theo cấu hình mặc định của Cloudflare.
 - [x] Ghi nhận Account ID và workers.dev subdomain do chủ sản phẩm cung cấp (chưa xác minh trực tiếp trên dashboard).
+- [x] Chủ sản phẩm xác nhận Yandex Mail là nhà cung cấp email và SMTP sending đã sẵn sàng ở phía hạ tầng email.
 - [x] Chủ sản phẩm xác nhận năm mailbox: admin, billing, support, no-reply, contact @sbiz.app.
 - [x] Chủ sản phẩm xác nhận chưa có ứng dụng Worker, D1 database hoặc R2 bucket.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
