@@ -10,7 +10,13 @@
 - Domain registration status: `Active`.
 - Ngày hết hạn đăng ký: `2027-10-19`.
 - DNS: chủ sản phẩm xác nhận đang dùng cấu hình mặc định của Cloudflare; chưa có danh sách bản ghi DNS được kiểm tra.
-- Email đã được thiết lập theo xác nhận của chủ sản phẩm; domain suffix và danh sách địa chỉ mailbox thực tế cần xác minh, không suy ra từ domain website.
+- Các mailbox do chủ sản phẩm xác nhận:
+  - Admin: `admin@sbiz.app`
+  - Billing: `billing@sbiz.app`
+  - Support: `support@sbiz.app`
+  - Automated notifications: `no-reply@sbiz.app`
+  - Contact: `contact@sbiz.app`
+- Chủ sản phẩm xác nhận hiện chưa có ứng dụng Worker, D1 database hoặc R2 bucket.
 - Email đăng nhập/tài khoản Cloudflare được cung cấp: `admin@vinarubber.com`.
 - Cloudflare Account ID: `7568b3c0e09d949e021c486fa8199b63`.
 - Workers.dev subdomain hiển thị trong Account details: `sbizapp.workers.dev` (chỉ ghi nhận; chưa khẳng định đã tạo Worker ứng dụng).
@@ -42,21 +48,21 @@ Tên hiển thị đề xuất có thể điều chỉnh trong code; địa ch�
 
 | Purpose | From address | Secret name |
 |---|---|---|
-| Admin/system notifications | `[mailbox admin — địa chỉ cần xác minh]` | `SMTP_PASSWORD_ADMIN` |
-| Billing/subscription | `[mailbox billing — địa chỉ cần xác minh]` | `SMTP_PASSWORD_BILLING` |
-| Customer support | `[mailbox support — địa chỉ cần xác minh]` | `SMTP_PASSWORD_SUPPORT` |
-| Automated notifications | `[mailbox noreply — địa chỉ cần xác minh]` | `SMTP_PASSWORD_NOREPLY` |
-| Contact/general inquiries | `[mailbox contact — địa chỉ cần xác minh]` | `SMTP_PASSWORD_CONTACT` |
+| Admin/system notifications | `admin@sbiz.app` | `SMTP_PASSWORD_ADMIN` |
+| Billing/subscription | `billing@sbiz.app` | `SMTP_PASSWORD_BILLING` |
+| Customer support | `support@sbiz.app` | `SMTP_PASSWORD_SUPPORT` |
+| Automated notifications | `no-reply@sbiz.app` | `SMTP_PASSWORD_NOREPLY` |
+| Contact/general inquiries | `contact@sbiz.app` | `SMTP_PASSWORD_CONTACT` |
 
 Cấu hình không bí mật có thể dùng tên biến thống nhất:
 - `SMTP_HOST=smtp.yandex.com`
 - `SMTP_PORT=465`
 - `SMTP_SECURITY=TLS`
-- `SMTP_USER_ADMIN=<địa chỉ mailbox admin cần xác minh>`
-- `SMTP_USER_BILLING=<địa chỉ mailbox billing cần xác minh>`
-- `SMTP_USER_SUPPORT=<địa chỉ mailbox support cần xác minh>`
-- `SMTP_USER_NOREPLY=<địa chỉ mailbox noreply cần xác minh>`
-- `SMTP_USER_CONTACT=<địa chỉ mailbox contact cần xác minh>`
+- `SMTP_USER_ADMIN=admin@sbiz.app`
+- `SMTP_USER_BILLING=billing@sbiz.app`
+- `SMTP_USER_SUPPORT=support@sbiz.app`
+- `SMTP_USER_NOREPLY=no-reply@sbiz.app`
+- `SMTP_USER_CONTACT=contact@sbiz.app`
 
 Tên hiển thị đề xuất:
 - `SBiz Admin`
@@ -136,11 +142,14 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Chủ sản phẩm xác nhận domain `sbiz.app` đã mua trên Cloudflare, registration status Active, hết hạn 2027-10-19.
 - [x] Chủ sản phẩm xác nhận DNS đang theo cấu hình mặc định của Cloudflare.
 - [x] Ghi nhận Account ID và workers.dev subdomain do chủ sản phẩm cung cấp (chưa xác minh trực tiếp trên dashboard).
-- [x] Chủ sản phẩm xác nhận đã thiết lập email; địa chỉ mailbox/domain suffix và app password theo từng mailbox cần xác minh.
+- [x] Chủ sản phẩm xác nhận năm mailbox: admin, billing, support, no-reply, contact @sbiz.app.
+- [x] Chủ sản phẩm xác nhận chưa có ứng dụng Worker, D1 database hoặc R2 bucket.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
 - [x] Account ID và Zone ID được chủ sản phẩm cung cấp.
 - [ ] Account ID, Zone ID và trạng thái zone được xác minh trực tiếp trên dashboard/API.
-- [ ] Tài nguyên Worker/D1/R2 hiện có được kiểm kê.
+- [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có ứng dụng Worker.
+- [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có D1 database.
+- [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có R2 bucket.
 - [ ] Cấu hình secret được thiết lập an toàn theo từng môi trường.
 - [ ] SMTP được kiểm thử trong runtime thực tế.
 - [ ] Quy trình triển khai và phân quyền production được xác nhận.
