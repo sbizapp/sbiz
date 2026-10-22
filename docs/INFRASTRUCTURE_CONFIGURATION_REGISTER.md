@@ -89,7 +89,9 @@ Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh
 - Domain registration status: `Active`; expiry: `2027-10-19`.
 - DNS đang theo cấu hình mặc định Cloudflare theo xác nhận của chủ sản phẩm; chưa kiểm tra từng record hoặc nameserver cụ thể.
 - KV namespace: `SBIZ_APP_KV`; Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp).
-- Worker/service name được chọn.
+- Tên Worker đề xuất cho bước bootstrap: `sbiz-app` (chưa tạo trên Cloudflare; chờ chủ sản phẩm tạo thủ công).
+- Mã nguồn bootstrap: `worker.js` trong repository; endpoint `GET /health` chỉ phục vụ smoke test, chưa có chức năng sản phẩm.
+- Binding names dự kiến khi cấu hình ứng dụng: `SBIZ_APP_KV` (KV), `SBIZ_APP_R2` (R2 bucket `sbiz-app-assets`), `SBIZ_APP_DB` (D1 database `sbiz-app-db`). Các binding chưa được cấu hình và bootstrap hiện tại chưa sử dụng chúng.
 - Môi trường dự kiến: development, staging, production.
 - R2 bucket đã tạo: `sbiz-app-assets`; location `Asia-Pacific (APAC)`; default storage class `Standard`.
 - S3 API endpoint hiển thị trong Dashboard: `https://7568b3c0e09d949e021c486fa8199b63.r2.cloudflarestorage.com/sbiz-app-assets`.
@@ -170,7 +172,11 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
 - [x] Account ID và Zone ID được chủ sản phẩm cung cấp.
 - [ ] Account ID, Zone ID và trạng thái zone được xác minh trực tiếp trên dashboard/API.
-- [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có ứng dụng Worker.
+- [x] Ghi nhận trạng thái ban đầu: chưa có ứng dụng Worker.
+- [x] Mã nguồn bootstrap `worker.js` đã được lưu trong GitHub; chưa triển khai trên Cloudflare.
+- [ ] Chủ sản phẩm tạo Worker `sbiz-app` trong Dashboard, dán `worker.js` và tự bấm Deploy.
+- [ ] Kiểm thử `GET /health` sau deploy và ghi nhận kết quả.
+- [ ] Cấu hình bindings KV/R2/D1 sau khi Worker bootstrap được xác minh.
 - [x] D1 database `sbiz-app-db` đã được chủ sản phẩm xác nhận tạo; ID `8106266b-a132-4ccc-bce8-b386c027a8f7`.
 - [x] Dashboard D1 hiển thị 0 tables và chưa có dữ liệu ứng dụng.
 - [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có R2 bucket.
