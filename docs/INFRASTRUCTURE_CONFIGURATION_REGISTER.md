@@ -1,4 +1,4 @@
-# SBIZ.APP — HỒ SƠ CẤU HÌNH HẠ TẦNG
+# SBIZ.COM — HỒ SƠ CẤU HÌNH HẠ TẦNG
 
 **Ngày cập nhật:** 2026-10-22  
 **Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận và danh sách cần thu thập. Chưa xác nhận triển khai tài nguyên Cloudflare.
@@ -6,14 +6,12 @@
 ## 1. Thông tin đã xác nhận
 
 - Repository: https://github.com/sbizapp/sbiz
-- Domain: `sbiz.app`
-- Domain đã được đưa lên Cloudflare (theo xác nhận của chủ sản phẩm).
-- Email được thiết lập trên Yandex Mail và app password đã sẵn sàng cho SMTP:
-  - `admin@sbiz.app`
-  - `billing@sbiz.app`
-  - `support@sbiz.app`
-  - `noreply@sbiz.app`
-  - `contact@sbiz.app`
+- Domain: `sbiz.com` (chủ sản phẩm xác nhận đã mua domain trên Cloudflare).
+- Email đã được thiết lập theo xác nhận của chủ sản phẩm; domain suffix và danh sách địa chỉ mailbox thực tế cần xác minh, không suy ra từ domain website.
+- Email đăng nhập/tài khoản Cloudflare được cung cấp: `admin@vinarubber.com`.
+- Cloudflare Account ID: `7568b3c0e09d949e021c486fa8199b63`.
+- Workers.dev subdomain hiển thị trong Account details: `sbizapp.workers.dev` (chỉ ghi nhận; chưa khẳng định đã tạo Worker ứng dụng).
+- Zone ID, trạng thái zone và nameservers của `sbiz.com`: chưa được cung cấp/xác minh.
 - Giá thuê bao đã chốt: USD 5/tháng hoặc USD 50/năm.
 - Hướng nền tảng ứng dụng: Cloudflare Workers, D1, R2; Cloudflare for SaaS cho custom domains; Paddle cho subscription billing quốc tế (theo kế hoạch tổng thể).
 - Chưa có bằng chứng trong hồ sơ này rằng Worker, D1, R2, Paddle hoặc môi trường production đã được tạo/cấu hình.
@@ -25,7 +23,7 @@ Cấu hình gửi thư theo tài liệu trợ giúp Yandex Mail:
 - SMTP host: `smtp.yandex.com`
 - SMTP port khuyến nghị: `465`
 - Security: implicit TLS / SSL
-- Username: địa chỉ email đầy đủ, ví dụ `support@sbiz.app`
+- Username: địa chỉ email đầy đủ, ví dụ `[mailbox support — địa chỉ cần xác minh]`
 - Password: app password riêng tương ứng với mailbox.
 - Phương án thay thế được Yandex nêu: port `587`; chỉ sử dụng khi client được cấu hình STARTTLS đúng cách.
 
@@ -39,21 +37,21 @@ Tên hiển thị đề xuất có thể điều chỉnh trong code; địa ch�
 
 | Purpose | From address | Secret name |
 |---|---|---|
-| Admin/system notifications | `admin@sbiz.app` | `SMTP_PASSWORD_ADMIN` |
-| Billing/subscription | `billing@sbiz.app` | `SMTP_PASSWORD_BILLING` |
-| Customer support | `support@sbiz.app` | `SMTP_PASSWORD_SUPPORT` |
-| Automated notifications | `noreply@sbiz.app` | `SMTP_PASSWORD_NOREPLY` |
-| Contact/general inquiries | `contact@sbiz.app` | `SMTP_PASSWORD_CONTACT` |
+| Admin/system notifications | `[mailbox admin — địa chỉ cần xác minh]` | `SMTP_PASSWORD_ADMIN` |
+| Billing/subscription | `[mailbox billing — địa chỉ cần xác minh]` | `SMTP_PASSWORD_BILLING` |
+| Customer support | `[mailbox support — địa chỉ cần xác minh]` | `SMTP_PASSWORD_SUPPORT` |
+| Automated notifications | `[mailbox noreply — địa chỉ cần xác minh]` | `SMTP_PASSWORD_NOREPLY` |
+| Contact/general inquiries | `[mailbox contact — địa chỉ cần xác minh]` | `SMTP_PASSWORD_CONTACT` |
 
 Cấu hình không bí mật có thể dùng tên biến thống nhất:
 - `SMTP_HOST=smtp.yandex.com`
 - `SMTP_PORT=465`
 - `SMTP_SECURITY=TLS`
-- `SMTP_USER_ADMIN=admin@sbiz.app`
-- `SMTP_USER_BILLING=billing@sbiz.app`
-- `SMTP_USER_SUPPORT=support@sbiz.app`
-- `SMTP_USER_NOREPLY=noreply@sbiz.app`
-- `SMTP_USER_CONTACT=contact@sbiz.app`
+- `SMTP_USER_ADMIN=admin@sbiz.com`
+- `SMTP_USER_BILLING=billing@sbiz.com`
+- `SMTP_USER_SUPPORT=support@sbiz.com`
+- `SMTP_USER_NOREPLY=noreply@sbiz.com`
+- `SMTP_USER_CONTACT=contact@sbiz.com`
 
 Tên hiển thị đề xuất:
 - `SBiz Admin`
@@ -70,9 +68,10 @@ Tên hiển thị là đề xuất kỹ thuật, chưa phải quyết định th
 
 Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh:
 
-- Cloudflare Account ID.
-- Zone ID của `sbiz.app`.
-- Xác nhận zone đang Active và nameserver hiện tại.
+- Cloudflare Account ID: `7568b3c0e09d949e021c486fa8199b63` (do chủ sản phẩm cung cấp; chưa kiểm tra trực tiếp trong dashboard).
+- Workers.dev subdomain hiển thị: `sbizapp.workers.dev`.
+- Zone ID của `sbiz.com`: chưa có.
+- Trạng thái zone và nameserver hiện tại: chưa có.
 - Worker/service name được chọn.
 - Môi trường dự kiến: development, staging, production.
 - Nếu dùng R2: tên bucket, region/hint nếu có, và mục đích bucket.
@@ -94,16 +93,17 @@ Tài liệu chính thức về Worker variables/secrets:
 ## 4. Các mục cần chủ sản phẩm cung cấp hoặc xác nhận
 
 ### A. Cloudflare identity
-1. Account ID.
-2. Zone ID cho `sbiz.app`.
+1. Account ID đã cung cấp: `7568b3c0e09d949e021c486fa8199b63`.
+2. Zone ID cho `sbiz.com`.
 3. Trạng thái zone: Active hay còn chờ nameserver/verification.
 4. Có sẵn Worker, D1 database, R2 bucket hoặc Cloudflare for SaaS configuration nào chưa? Nếu có, cung cấp tên và ID; không tạo trùng tài nguyên.
 
 ### B. SMTP
-1. Xác nhận app password đã được tạo riêng cho từng mailbox hay có mailbox nào dùng chung credential.
-2. Xác nhận tên hiển thị của từng địa chỉ nếu khác các tên đề xuất.
-3. Xác nhận địa chỉ nào được phép gửi email giao dịch và địa chỉ nào chỉ dùng nhận thư.
-4. Chưa gửi app password vào chat hoặc Git.
+1. Xác nhận domain suffix và địa chỉ chính xác của từng mailbox; không gửi app password vào chat.
+2. Xác nhận app password đã được tạo riêng cho từng mailbox hay có mailbox nào dùng chung credential.
+3. Xác nhận tên hiển thị của từng địa chỉ nếu khác các tên đề xuất.
+4. Xác nhận địa chỉ nào được phép gửi email giao dịch và địa chỉ nào chỉ dùng nhận thư.
+5. Chưa gửi app password vào chat hoặc Git.
 
 ### C. CI/CD và secrets
 1. Chọn cách triển khai ban đầu: deploy thủ công bằng Wrangler hay GitHub Actions.
@@ -127,9 +127,9 @@ Tài liệu chính thức về Worker variables/secrets:
 
 ## 6. Trạng thái
 
-- [x] Domain `sbiz.app` được chủ sản phẩm xác nhận đã nằm trên Cloudflare.
-- [x] Năm địa chỉ Yandex Mail được chủ sản phẩm xác nhận đã thiết lập.
-- [x] App password được chủ sản phẩm xác nhận đã sẵn sàng.
+- [x] Chủ sản phẩm xác nhận đã mua domain `sbiz.com` trên Cloudflare.
+- [x] Ghi nhận Account ID và workers.dev subdomain do chủ sản phẩm cung cấp (chưa xác minh trực tiếp trên dashboard).
+- [x] Chủ sản phẩm xác nhận đã thiết lập email; địa chỉ mailbox/domain suffix và app password theo từng mailbox cần xác minh.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
 - [ ] Cloudflare Account ID và Zone ID được thu thập, xác minh.
 - [ ] Tài nguyên Worker/D1/R2 hiện có được kiểm kê.
