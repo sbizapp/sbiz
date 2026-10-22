@@ -36,7 +36,7 @@ Cấu hình gửi thư theo tài liệu trợ giúp Yandex Mail:
 
 - SMTP host: `smtp.yandex.com`
 - SMTP port khuyến nghị: `465`
-- Security: implicit TLS / SSL
+- Security: `SSL` (the Yandex client-setting label for SMTP port 465; this means implicit TLS from connection start, not a recommendation to use obsolete SSL protocol versions).
 - Username: địa chỉ email đầy đủ tương ứng với từng mailbox.
 - Password: mỗi mailbox có app password riêng; chủ sản phẩm sẽ cung cấp/cấu hình từng password trực tiếp trong secret store an toàn khi cần.
 - Không yêu cầu chủ sản phẩm gửi password trong chat. Không lưu password trong Git; chỉ lưu các giá trị cấu hình không bí mật và tên secret.
@@ -58,10 +58,10 @@ Tên hiển thị đề xuất có thể điều chỉnh trong code; địa ch�
 | Automated notifications | `no-reply@sbiz.app` | `SMTP_PASSWORD_NOREPLY` |
 | Contact/general inquiries | `contact@sbiz.app` | `SMTP_PASSWORD_CONTACT` |
 
-Cấu hình không bí mật có thể dùng tên biến thống nhất:
+Cấu hình không bí mật có thể dùng tên biến thống nhất (giá trị `SMTP_SECURITY=SSL` theo nhãn cấu hình Yandex cho port 465; ứng dụng phải dùng chế độ SMTP implicit TLS ngay từ lúc kết nối, không dùng STARTTLS trên port này):
 - `SMTP_HOST=smtp.yandex.com`
 - `SMTP_PORT=465`
-- `SMTP_SECURITY=TLS`
+- `SMTP_SECURITY=SSL`
 - `SMTP_USER_ADMIN=admin@sbiz.app`
 - `SMTP_USER_BILLING=billing@sbiz.app`
 - `SMTP_USER_SUPPORT=support@sbiz.app`
