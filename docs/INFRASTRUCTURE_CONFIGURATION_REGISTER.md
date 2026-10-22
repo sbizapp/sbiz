@@ -1,7 +1,7 @@
 # SBIZ.APP — HỒ SƠ CẤU HÌNH HẠ TẦNG
 
 **Ngày cập nhật:** 2026-10-22  
-**Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận. KV namespace, R2 bucket và D1 database đã được tạo theo thông tin Dashboard; Worker ứng dụng chưa được xác nhận là đã tạo.
+**Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận. KV namespace, R2 bucket và D1 database đã được tạo theo thông tin Dashboard. Chủ sản phẩm đã xác nhận Worker `sbiz-app` phản hồi thành công qua `https://sbiz.app/health`; mã nguồn đang được chuyển sang cấu trúc nhiều file với Wrangler.
 
 ## 1. Thông tin đã xác nhận
 
@@ -179,7 +179,7 @@ Tài liệu chính thức về Worker variables/secrets:
 - [ ] Cấu hình bindings KV/R2/D1 sau khi Worker bootstrap được xác minh.
 - [x] D1 database `sbiz-app-db` đã được chủ sản phẩm xác nhận tạo; ID `8106266b-a132-4ccc-bce8-b386c027a8f7`.
 - [x] Dashboard D1 hiển thị 0 tables và chưa có dữ liệu ứng dụng.
-- [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có R2 bucket.
+- [x] R2 bucket `sbiz-app-assets` đã được chủ sản phẩm xác nhận tạo; xem thông tin chi tiết ở mục R2.
 - [ ] Cấu hình secret được thiết lập an toàn theo từng môi trường.
 - [ ] SMTP được kiểm thử trong runtime thực tế.
 - [x] Chủ sản phẩm chọn quy trình deploy thủ công: Builder bàn giao `worker.js`; chủ sản phẩm cập nhật trong Cloudflare Workers và tự bấm Deploy.
