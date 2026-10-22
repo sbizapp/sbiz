@@ -35,8 +35,9 @@ Cấu hình gửi thư theo tài liệu trợ giúp Yandex Mail:
 - SMTP host: `smtp.yandex.com`
 - SMTP port khuyến nghị: `465`
 - Security: implicit TLS / SSL
-- Username: địa chỉ email đầy đủ, theo địa chỉ mailbox thực tế (chưa xác minh)
-- Password: app password riêng tương ứng với mailbox.
+- Username: địa chỉ email đầy đủ tương ứng với từng mailbox.
+- Password: mỗi mailbox có app password riêng; chủ sản phẩm sẽ cung cấp/cấu hình từng password trực tiếp trong secret store an toàn khi cần.
+- Không yêu cầu chủ sản phẩm gửi password trong chat. Không lưu password trong Git; chỉ lưu các giá trị cấu hình không bí mật và tên secret.
 - Phương án thay thế được Yandex nêu: port `587`; chỉ sử dụng khi client được cấu hình STARTTLS đúng cách.
 
 Nguồn chính thức:
@@ -144,6 +145,7 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Chủ sản phẩm xác nhận DNS đang theo cấu hình mặc định của Cloudflare.
 - [x] Ghi nhận Account ID và workers.dev subdomain do chủ sản phẩm cung cấp (chưa xác minh trực tiếp trên dashboard).
 - [x] Chủ sản phẩm xác nhận Yandex Mail là nhà cung cấp email và SMTP sending đã sẵn sàng ở phía hạ tầng email.
+- [x] Mỗi mailbox có app password riêng; chủ sản phẩm sẽ tự cấu hình/cung cấp từng password qua secret store an toàn, không qua chat/Git.
 - [x] Chủ sản phẩm xác nhận năm mailbox: admin, billing, support, no-reply, contact @sbiz.app.
 - [x] Chủ sản phẩm xác nhận chưa có ứng dụng Worker, D1 database hoặc R2 bucket.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
