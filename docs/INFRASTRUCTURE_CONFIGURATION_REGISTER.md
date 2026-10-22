@@ -18,6 +18,8 @@
   - Automated notifications: `no-reply@sbiz.app`
   - Contact: `contact@sbiz.app`
 - Chủ sản phẩm xác nhận hiện chưa có ứng dụng Worker, D1 database hoặc R2 bucket.
+- KV namespace đã tạo: `SBIZ_APP_KV`.
+- KV Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp từ Instance details; chưa xác minh qua API).
 - Email đăng nhập/tài khoản Cloudflare được cung cấp: `admin@vinarubber.com`.
 - Cloudflare Account ID: `7568b3c0e09d949e021c486fa8199b63`.
 - Workers.dev subdomain hiển thị trong Account details: `sbizapp.workers.dev` (chỉ ghi nhận; chưa khẳng định đã tạo Worker ứng dụng).
@@ -86,6 +88,7 @@ Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh
 - Workers.dev subdomain hiển thị: `sbizapp.workers.dev`.
 - Domain registration status: `Active`; expiry: `2027-10-19`.
 - DNS đang theo cấu hình mặc định Cloudflare theo xác nhận của chủ sản phẩm; chưa kiểm tra từng record hoặc nameserver cụ thể.
+- KV namespace: `SBIZ_APP_KV`; Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp).
 - Worker/service name được chọn.
 - Môi trường dự kiến: development, staging, production.
 - Nếu dùng R2: tên bucket, region/hint nếu có, và mục đích bucket.
@@ -168,5 +171,7 @@ Tài liệu chính thức về Worker variables/secrets:
 - [ ] Cấu hình secret được thiết lập an toàn theo từng môi trường.
 - [ ] SMTP được kiểm thử trong runtime thực tế.
 - [x] Chủ sản phẩm chọn quy trình deploy thủ công: Builder bàn giao `worker.js`; chủ sản phẩm cập nhật trong Cloudflare Workers và tự bấm Deploy.
-- [x] Chủ sản phẩm yêu cầu được hướng dẫn tự tạo KV, R2 và D1; các tài nguyên này chưa được tạo.
+- [x] KV namespace `SBIZ_APP_KV` đã được chủ sản phẩm tạo; Namespace ID đã ghi nhận.
+- [ ] R2 bucket chưa được tạo.
+- [ ] D1 database chưa được tạo.
 - [ ] Quy trình kiểm thử sau deploy và khôi phục phiên bản được xác nhận.
