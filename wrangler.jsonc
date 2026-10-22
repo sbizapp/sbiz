@@ -2,5 +2,25 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sbiz",
   "main": "worker.js",
-  "compatibility_date": "2026-10-22"
+  "compatibility_date": "2026-10-22",
+  "preview_urls": false,
+  "kv_namespaces": [
+    {
+      "binding": "SBIZ_APP_KV",
+      "id": "f5c12871f3204a7588cd18b3dfca689a"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "SBIZ_APP_R2",
+      "bucket_name": "sbiz-app-assets"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "SBIZ_APP_DB",
+      "database_name": "sbiz-app-db",
+      "database_id": "8106266b-a132-4ccc-bce8-b386c027a8f7"
+    }
+  ]
 }
