@@ -139,7 +139,18 @@ Tài liệu chính thức về Worker variables/secrets:
 - Mọi ID/resource name phải được đọc từ tài khoản hoặc cung cấp bởi chủ sản phẩm; không tự bịa ID.
 - Tài liệu này là sổ đăng ký cấu hình. Nó không đồng nghĩa với việc đã tạo Worker, database, bucket, token, DNS records hoặc triển khai ứng dụng.
 
-## 6. Trạng thái
+## 6. Quy trình triển khai do chủ sản phẩm quyết định
+
+- Builder hướng dẫn chủ sản phẩm tự tạo các tài nguyên cần thiết trong Cloudflare Dashboard: KV namespace, R2 bucket, D1 database.
+- Builder viết và bàn giao mã ứng dụng trong file `worker.js` để chủ sản phẩm tự đưa thủ công vào Cloudflare Workers và bấm Deploy.
+- Khi cần sửa lỗi/nâng cấp, Builder phải xác định đúng phiên bản nguồn đã bàn giao, cung cấp file đầy đủ đã sửa hoặc file mới; chủ sản phẩm thay nội dung trong Cloudflare Workers và tự bấm Deploy.
+- Không tự kích hoạt deployment, không dùng GitHub Actions để deploy thay chủ sản phẩm.
+- Trước khi code sử dụng KV/R2/D1, phải chỉ rõ bindings tương ứng trong Worker Settings và dùng đúng binding names trong code. Không được giả định tài nguyên đã tồn tại.
+- Sau mỗi lần deploy, cần hướng dẫn kiểm thử có thể quan sát được và ghi lại kết quả/evidence; không khẳng định “chạy ngon” nếu chưa có bằng chứng.
+- Cách triển khai bằng Dashboard editor phải được kiểm tra về khả năng quản lý source/version và giới hạn kích thước; giữ bản nguồn `worker.js` có phiên bản trong GitHub để có thể khôi phục. GitHub là nơi lưu mã nguồn, không phải nơi tự động deploy.
+- SMTP: không giả định TCP SMTP/TLS hoặc thư viện Node.js SMTP chạy trực tiếp trong Workers. Phải kiểm tra tương thích runtime và chọn giải pháp được hỗ trợ trước khi triển khai chức năng gửi email.
+
+## 7. Trạng thái
 
 - [x] Chủ sản phẩm xác nhận domain `sbiz.app` đã mua trên Cloudflare, registration status Active, hết hạn 2027-10-19.
 - [x] Chủ sản phẩm xác nhận DNS đang theo cấu hình mặc định của Cloudflare.
@@ -156,4 +167,6 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có R2 bucket.
 - [ ] Cấu hình secret được thiết lập an toàn theo từng môi trường.
 - [ ] SMTP được kiểm thử trong runtime thực tế.
-- [ ] Quy trình triển khai và phân quyền production được xác nhận.
+- [x] Chủ sản phẩm chọn quy trình deploy thủ công: Builder bàn giao `worker.js`; chủ sản phẩm cập nhật trong Cloudflare Workers và tự bấm Deploy.
+- [x] Chủ sản phẩm yêu cầu được hướng dẫn tự tạo KV, R2 và D1; các tài nguyên này chưa được tạo.
+- [ ] Quy trình kiểm thử sau deploy và khôi phục phiên bản được xác nhận.
