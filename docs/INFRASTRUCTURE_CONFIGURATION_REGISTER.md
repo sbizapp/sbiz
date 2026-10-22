@@ -23,7 +23,7 @@ Cấu hình gửi thư theo tài liệu trợ giúp Yandex Mail:
 - SMTP host: `smtp.yandex.com`
 - SMTP port khuyến nghị: `465`
 - Security: implicit TLS / SSL
-- Username: địa chỉ email đầy đủ, ví dụ `[mailbox support — địa chỉ cần xác minh]`
+- Username: địa chỉ email đầy đủ, theo địa chỉ mailbox thực tế (chưa xác minh)
 - Password: app password riêng tương ứng với mailbox.
 - Phương án thay thế được Yandex nêu: port `587`; chỉ sử dụng khi client được cấu hình STARTTLS đúng cách.
 
@@ -47,11 +47,11 @@ Cấu hình không bí mật có thể dùng tên biến thống nhất:
 - `SMTP_HOST=smtp.yandex.com`
 - `SMTP_PORT=465`
 - `SMTP_SECURITY=TLS`
-- `SMTP_USER_ADMIN=admin@sbiz.com`
-- `SMTP_USER_BILLING=billing@sbiz.com`
-- `SMTP_USER_SUPPORT=support@sbiz.com`
-- `SMTP_USER_NOREPLY=noreply@sbiz.com`
-- `SMTP_USER_CONTACT=contact@sbiz.com`
+- `SMTP_USER_ADMIN=<địa chỉ mailbox admin cần xác minh>`
+- `SMTP_USER_BILLING=<địa chỉ mailbox billing cần xác minh>`
+- `SMTP_USER_SUPPORT=<địa chỉ mailbox support cần xác minh>`
+- `SMTP_USER_NOREPLY=<địa chỉ mailbox noreply cần xác minh>`
+- `SMTP_USER_CONTACT=<địa chỉ mailbox contact cần xác minh>`
 
 Tên hiển thị đề xuất:
 - `SBiz Admin`
@@ -131,7 +131,7 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Ghi nhận Account ID và workers.dev subdomain do chủ sản phẩm cung cấp (chưa xác minh trực tiếp trên dashboard).
 - [x] Chủ sản phẩm xác nhận đã thiết lập email; địa chỉ mailbox/domain suffix và app password theo từng mailbox cần xác minh.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
-- [ ] Cloudflare Account ID và Zone ID được thu thập, xác minh.
+- [ ] Cloudflare Account ID được xác minh trực tiếp trên dashboard và Zone ID được thu thập.
 - [ ] Tài nguyên Worker/D1/R2 hiện có được kiểm kê.
 - [ ] Cấu hình secret được thiết lập an toàn theo từng môi trường.
 - [ ] SMTP được kiểm thử trong runtime thực tế.
