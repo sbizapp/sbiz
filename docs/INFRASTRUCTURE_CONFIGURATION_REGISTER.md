@@ -1,7 +1,7 @@
 # SBIZ.APP — HỒ SƠ CẤU HÌNH HẠ TẦNG
 
 **Ngày cập nhật:** 2026-10-22  
-**Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận và danh sách cần thu thập. Chưa xác nhận triển khai tài nguyên Cloudflare.
+**Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận. KV namespace và R2 bucket đã được tạo theo thông tin Dashboard; Worker ứng dụng và D1 database chưa được xác nhận là đã tạo.
 
 ## 1. Thông tin đã xác nhận
 
@@ -17,7 +17,7 @@
   - Support: `support@sbiz.app`
   - Automated notifications: `no-reply@sbiz.app`
   - Contact: `contact@sbiz.app`
-- Chủ sản phẩm xác nhận hiện chưa có ứng dụng Worker, D1 database hoặc R2 bucket.
+- Chủ sản phẩm xác nhận ban đầu chưa có ứng dụng Worker, D1 database hoặc R2 bucket; trạng thái hiện tại được cập nhật theo tiến độ tạo tài nguyên.
 - KV namespace đã tạo: `SBIZ_APP_KV`.
 - KV Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp từ Instance details; chưa xác minh qua API).
 - Email đăng nhập/tài khoản Cloudflare được cung cấp: `admin@vinarubber.com`.
@@ -91,7 +91,9 @@ Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh
 - KV namespace: `SBIZ_APP_KV`; Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp).
 - Worker/service name được chọn.
 - Môi trường dự kiến: development, staging, production.
-- Nếu dùng R2: tên bucket, region/hint nếu có, và mục đích bucket.
+- R2 bucket đã tạo: `sbiz-app-assets`; location `Asia-Pacific (APAC)`; default storage class `Standard`.
+- S3 API endpoint hiển thị trong Dashboard: `https://7568b3c0e09d949e021c486fa8199b63.r2.cloudflarestorage.com/sbiz-app-assets`.
+- Public Development URL đang tắt; chưa gán custom domain; chưa có CORS policy. Giữ bucket private trong giai đoạn này; không bật public access hoặc cấu hình domain khi chưa có quyết định riêng.
 - Nếu dùng D1: database name, database ID, binding name và migration strategy.
 - Nếu dùng Cloudflare for SaaS: trạng thái subscription/entitlement, fallback origin, custom-hostname design và các hostname cần hỗ trợ.
 
@@ -161,7 +163,7 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Chủ sản phẩm xác nhận Yandex Mail là nhà cung cấp email và SMTP sending đã sẵn sàng ở phía hạ tầng email.
 - [x] Mỗi mailbox có app password riêng; chủ sản phẩm sẽ tự cấu hình/cung cấp từng password qua secret store an toàn, không qua chat/Git.
 - [x] Chủ sản phẩm xác nhận năm mailbox: admin, billing, support, no-reply, contact @sbiz.app.
-- [x] Chủ sản phẩm xác nhận chưa có ứng dụng Worker, D1 database hoặc R2 bucket.
+- [x] Kiểm kê ban đầu: chưa có Worker ứng dụng, D1 database hoặc R2 bucket; trạng thái hiện tại được cập nhật theo các mục bên dưới.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
 - [x] Account ID và Zone ID được chủ sản phẩm cung cấp.
 - [ ] Account ID, Zone ID và trạng thái zone được xác minh trực tiếp trên dashboard/API.
@@ -172,6 +174,7 @@ Tài liệu chính thức về Worker variables/secrets:
 - [ ] SMTP được kiểm thử trong runtime thực tế.
 - [x] Chủ sản phẩm chọn quy trình deploy thủ công: Builder bàn giao `worker.js`; chủ sản phẩm cập nhật trong Cloudflare Workers và tự bấm Deploy.
 - [x] KV namespace `SBIZ_APP_KV` đã được chủ sản phẩm tạo; Namespace ID đã ghi nhận.
-- [ ] R2 bucket chưa được tạo.
+- [x] R2 bucket `sbiz-app-assets` được chủ sản phẩm xác nhận đã tạo ngày 2026-10-22; location APAC, storage class Standard.
+- [x] Public Development URL đang tắt; chưa có custom domain và chưa có CORS policy.
 - [ ] D1 database chưa được tạo.
 - [ ] Quy trình kiểm thử sau deploy và khôi phục phiên bản được xác nhận.
