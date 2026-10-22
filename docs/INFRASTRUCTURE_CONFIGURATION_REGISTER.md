@@ -1,7 +1,7 @@
 # SBIZ.APP — HỒ SƠ CẤU HÌNH HẠ TẦNG
 
 **Ngày cập nhật:** 2026-10-22  
-**Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận. KV namespace và R2 bucket đã được tạo theo thông tin Dashboard; Worker ứng dụng và D1 database chưa được xác nhận là đã tạo.
+**Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận. KV namespace, R2 bucket và D1 database đã được tạo theo thông tin Dashboard; Worker ứng dụng chưa được xác nhận là đã tạo.
 
 ## 1. Thông tin đã xác nhận
 
@@ -28,7 +28,7 @@
 - Nameservers cụ thể và trạng thái zone trong Cloudflare Dashboard: chưa được cung cấp; ghi nhận riêng rằng domain đang theo cấu hình DNS mặc định Cloudflare.
 - Giá thuê bao đã chốt: USD 5/tháng hoặc USD 50/năm.
 - Hướng nền tảng ứng dụng: Cloudflare Workers, D1, R2; Cloudflare for SaaS cho custom domains; Paddle cho subscription billing quốc tế (theo kế hoạch tổng thể).
-- Chưa có bằng chứng trong hồ sơ này rằng Worker, D1, R2, Paddle hoặc môi trường production đã được tạo/cấu hình.
+- Chưa có bằng chứng trong hồ sơ này rằng Worker ứng dụng, Paddle hoặc môi trường production đã được tạo/cấu hình. KV, R2 và D1 đã được chủ sản phẩm xác nhận tạo.
 
 ## 2. Cấu hình SMTP Yandex — giá trị không bí mật
 
@@ -94,7 +94,10 @@ Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh
 - R2 bucket đã tạo: `sbiz-app-assets`; location `Asia-Pacific (APAC)`; default storage class `Standard`.
 - S3 API endpoint hiển thị trong Dashboard: `https://7568b3c0e09d949e021c486fa8199b63.r2.cloudflarestorage.com/sbiz-app-assets`.
 - Public Development URL đang tắt; chưa gán custom domain; chưa có CORS policy. Giữ bucket private trong giai đoạn này; không bật public access hoặc cấu hình domain khi chưa có quyết định riêng.
-- Nếu dùng D1: database name, database ID, binding name và migration strategy.
+- D1 database đã tạo: `sbiz-app-db`.
+- D1 Database ID: `8106266b-a132-4ccc-bce8-b386c027a8f7` (do chủ sản phẩm cung cấp từ Dashboard).
+- Dashboard cho thấy 0 tables, 0 queries, 0 rows read và 0 rows written; chưa tạo schema hoặc dữ liệu ứng dụng.
+- Binding name và migration strategy sẽ được chốt khi chuẩn bị Worker/schema; chưa tự tạo bảng ở bước này.
 - Nếu dùng Cloudflare for SaaS: trạng thái subscription/entitlement, fallback origin, custom-hostname design và các hostname cần hỗ trợ.
 
 Không ghi API token vào Git. Nếu cần API token cho CLI/CI, chủ sản phẩm tạo token có quyền tối thiểu cần thiết và lưu trong secret store. Chỉ ghi trong Git tên secret, quyền được cấp, mục đích và ngày xác minh; không ghi token value.
@@ -163,12 +166,13 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Chủ sản phẩm xác nhận Yandex Mail là nhà cung cấp email và SMTP sending đã sẵn sàng ở phía hạ tầng email.
 - [x] Mỗi mailbox có app password riêng; chủ sản phẩm sẽ tự cấu hình/cung cấp từng password qua secret store an toàn, không qua chat/Git.
 - [x] Chủ sản phẩm xác nhận năm mailbox: admin, billing, support, no-reply, contact @sbiz.app.
-- [x] Kiểm kê ban đầu: chưa có Worker ứng dụng, D1 database hoặc R2 bucket; trạng thái hiện tại được cập nhật theo các mục bên dưới.
+- [x] Ghi nhận kiểm kê ban đầu: chưa có Worker ứng dụng, D1 database hoặc R2 bucket; trạng thái hiện tại được cập nhật theo các mục bên dưới.
 - [x] Ghi nhận cấu hình SMTP tiêu chuẩn từ tài liệu Yandex.
 - [x] Account ID và Zone ID được chủ sản phẩm cung cấp.
 - [ ] Account ID, Zone ID và trạng thái zone được xác minh trực tiếp trên dashboard/API.
 - [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có ứng dụng Worker.
-- [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có D1 database.
+- [x] D1 database `sbiz-app-db` đã được chủ sản phẩm xác nhận tạo; ID `8106266b-a132-4ccc-bce8-b386c027a8f7`.
+- [x] Dashboard D1 hiển thị 0 tables và chưa có dữ liệu ứng dụng.
 - [x] Kiểm kê ban đầu theo xác nhận của chủ sản phẩm: chưa có R2 bucket.
 - [ ] Cấu hình secret được thiết lập an toàn theo từng môi trường.
 - [ ] SMTP được kiểm thử trong runtime thực tế.
@@ -176,5 +180,5 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] KV namespace `SBIZ_APP_KV` đã được chủ sản phẩm tạo; Namespace ID đã ghi nhận.
 - [x] R2 bucket `sbiz-app-assets` được chủ sản phẩm xác nhận đã tạo ngày 2026-10-22; location APAC, storage class Standard.
 - [x] Public Development URL đang tắt; chưa có custom domain và chưa có CORS policy.
-- [ ] D1 database chưa được tạo.
+- [ ] Chưa tạo schema/bảng và chưa có dữ liệu ứng dụng trong D1.
 - [ ] Quy trình kiểm thử sau deploy và khôi phục phiên bản được xác nhận.
