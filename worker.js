@@ -1,10 +1,9 @@
 /**
  * SBiz.app — Worker entry point
- * Purpose: Connect the Cloudflare Worker runtime to the application router.
- * Product features belong in focused modules, not in this file.
+ * Purpose: Connect Cloudflare Worker HTTP and scheduled events to the application.
  */
-
 import { routeRequest } from "./src/router.js";
+import { cleanupMod01 } from "./src/modules/mod01.js";
 
 /* [WORKER][ENTRY][START] */
 export default {
@@ -24,6 +23,9 @@ export default {
         },
       );
     }
+  },
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(cleanupMod01(env));
   },
 };
 /* [WORKER][ENTRY][END] */
