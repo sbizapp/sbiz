@@ -568,11 +568,19 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     assert.equal(body.ssl_status, "active");
     assert.equal(providerCalls, 3);
     assert.equal(cnameCalls, 2);
-    const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at,routing_verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at,routing_verified_at,provider_validation_json,ssl_validation_json,cname_target FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
     assert.equal(saved.status, "active");
     assert.equal(saved.provider_hostname_id, "cf-hostname-1");
     assert.ok(saved.verified_at);
     assert.ok(saved.routing_verified_at);
+    assert.equal(saved.cname_target, "fallback.saas.example.net");
+    assert.equal(JSON.parse(saved.provider_validation_json).ownership.name, "_cf-custom-hostname.secure.example.com");
+    assert.equal(JSON.parse(saved.ssl_validation_json)[0].txt_name, "_acme-challenge.secure.example.com");
+    const listed = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains"), f.env, { waitUntil() {} });
+    assert.equal(listed.status, 200);
+    const listedBody = await listed.json();
+    assert.equal(listedBody.domains[0].provider_validation.ownership.value, "provider-token");
+    assert.equal(listedBody.domains[0].ssl_validation_records[0].txt_value, "ssl-token");
   } finally {
     globalThis.fetch = originalFetch;
   }
