@@ -514,19 +514,24 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
   globalThis.fetch = async (input, init = {}) => {
     const url = String(input);
     if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
+      if (url.includes("type=CNAME")) return new Response(JSON.stringify({ Answer: [{ type: 5, data: "fallback.saas.example.net." }] }), { status: 200 });
       return new Response(JSON.stringify({ Answer: [{ type: 16, data: '"sbiz-domain-verification=' + token + '"' }] }), {
         status: 200, headers: { "content-type": "application/dns-json" }
       });
     }
+    if (url.endsWith("/custom_hostnames/fallback_origin")) {
+      return new Response(JSON.stringify({ success: true, result: { origin: "fallback.saas.example.net", status: "active" } }), { status: 200 });
+    }
     if (url.includes("/custom_hostnames")) {
       providerCalls++;
       if (init.method === "POST") {
-        return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "pending_validation", ssl: { status: "pending_issuance" } } }), {
+        assert.match(init.body, /"method":"txt"/);
+        return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "pending_validation", ownership_verification: { name: "_cf-custom-hostname.secure.example.com", type: "txt", value: "provider-token" }, ssl: { status: "pending_issuance", validation_records: [{ txt_name: "_acme-challenge.secure.example.com", txt_value: "ssl-token" }] } } }), {
           status: 200, headers: { "content-type": "application/json" }
         });
       }
       assert.equal(init.method, "GET");
-      return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "active", ssl: { status: "active" } } }), {
+      return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "active", ownership_verification: { name: "_cf-custom-hostname.secure.example.com", type: "txt", value: "provider-token" }, ssl: { status: "active", validation_records: [{ txt_name: "_acme-challenge.secure.example.com", txt_value: "ssl-token" }] } } }), {
         status: 200, headers: { "content-type": "application/json" }
       });
     }
@@ -634,6 +639,9 @@ test("custom domain removal requires provider confirmation before marking remove
     const url = String(input);
     if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
       return new Response(JSON.stringify({ Answer: [{ type: 16, data: '"sbiz-domain-verification=' + token + '"' }] }), { status: 200 });
+    }
+    if (url.endsWith("/custom_hostnames/fallback_origin")) {
+      return new Response(JSON.stringify({ success: true, result: { origin: "fallback.saas.example.net", status: "active" } }), { status: 200 });
     }
     if (url.includes("/custom_hostnames") && init.method === "POST") {
       return new Response(JSON.stringify({ success: true, result: { id: "cf-remove-1", hostname: "remove.example.com", status: "pending_validation", ssl: { status: "pending_validation" } } }), { status: 200 });
