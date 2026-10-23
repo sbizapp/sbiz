@@ -619,3 +619,50 @@ test("dashboard renders custom-domain controls in each supported locale", async 
   assert.match(source, /Cloudflare confirms it and its SSL status/);
   assert.match(source, /Tên miền chỉ hoạt động khi Cloudflare xác nhận tên miền và SSL/);
 });
+
+test("custom domain removal requires provider confirmation before marking removed", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const created = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "remove.example.com" }
+  }), f.env, { waitUntil() {} });
+  const challenge = await created.json();
+  const token = challenge.dns.value.slice("sbiz-domain-verification=".length);
+  const originalFetch = globalThis.fetch;
+  let deleteCalls = 0;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input);
+    if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
+      return new Response(JSON.stringify({ Answer: [{ type: 16, data: '"sbiz-domain-verification=' + token + '"' }] }), { status: 200 });
+    }
+    if (url.includes("/custom_hostnames") && init.method === "POST") {
+      return new Response(JSON.stringify({ success: true, result: { id: "cf-remove-1", hostname: "remove.example.com", status: "pending_validation", ssl: { status: "pending_validation" } } }), { status: 200 });
+    }
+    if (url.endsWith("/cf-remove-1") && init.method === "DELETE") {
+      deleteCalls++;
+      if (deleteCalls === 1) return new Response(JSON.stringify({ success: false, errors: [{ code: 1000 }] }), { status: 500 });
+      return new Response(JSON.stringify({ success: true, result: { id: "cf-remove-1" } }), { status: 200 });
+    }
+    throw new Error("Unexpected external request in test: " + url + " " + init.method);
+  };
+  const env = { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" };
+  try {
+    const verified = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
+      method: "POST", body: {}
+    }), env, { waitUntil() {} });
+    assert.equal(verified.status, 202);
+    const failedDelete = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id, {
+      method: "DELETE"
+    }), env, { waitUntil() {} });
+    assert.equal(failedDelete.status, 503);
+    assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get().status, "error");
+    const deleted = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id, {
+      method: "DELETE"
+    }), env, { waitUntil() {} });
+    assert.equal(deleted.status, 200);
+    assert.equal((await deleted.json()).status, "removed");
+    assert.equal(deleteCalls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
