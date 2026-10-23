@@ -745,7 +745,7 @@ async function adminBusiness(request, env, businessId) {
 
 function normalizeCustomHostname(value) {
   const raw = String(value || "").trim().toLowerCase().replace(/\.$/, "");
-  if (!raw || raw.length > 253 || /[\s/@?#]/.test(raw)) return null;
+  if (!raw || raw.length > 253 || /[\s/@?#:]/.test(raw)) return null;
   let parsed;
   try { parsed = new URL("https://" + raw); } catch { return null; }
   if (parsed.username || parsed.password || parsed.port || parsed.pathname !== "/" || parsed.search || parsed.hash) return null;
@@ -787,20 +787,23 @@ async function createBusinessCustomDomain(request, env, businessId) {
   const db = env.SBIZ_APP_DB;
   const existing = await db.prepare("SELECT domain_id,status FROM business_custom_domains WHERE hostname=? COLLATE NOCASE AND status<>'removed'").bind(hostname).first();
   if (existing) return json({ error: existing.status === "active" ? "HOSTNAME_ALREADY_ACTIVE" : "HOSTNAME_ALREADY_RESERVED", message: "This hostname is already linked or has a pending request." }, 409);
-  const count = await db.prepare("SELECT COUNT(*) AS total FROM business_custom_domains WHERE business_id=? AND status<>'removed'").bind(businessId).first();
-  if (Number(count?.total || 0) >= 10) return json({ error: "DOMAIN_LIMIT_REACHED", message: "A business can have up to 10 linked or pending custom hostnames." }, 409);
   const token = randomToken(32);
   const now = new Date();
   const createdAt = now.toISOString();
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
   const domainId = uuid();
   try {
-    await db.prepare("INSERT INTO business_custom_domains (domain_id,business_id,hostname,status,verification_token_hash,verification_created_at,verification_expires_at,created_at,updated_at) VALUES (?,?,?,'pending_dns',?,?,?,?,?)")
-      .bind(domainId, businessId, hostname, await sha256(token), createdAt, expiresAt, createdAt, createdAt).run();
+    await db.batch([
+      db.prepare("INSERT INTO business_custom_domains (domain_id,business_id,hostname,status,verification_token_hash,verification_created_at,verification_expires_at,created_at,updated_at) VALUES (?,?,?,'pending_dns',?,?,?,?,?)")
+        .bind(domainId, businessId, hostname, await sha256(token), createdAt, expiresAt, createdAt, createdAt),
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?,?, 'custom_domain_requested',?,?,?,?,?)")
+        .bind(uuid(), businessId, createdAt, access.account.account_id, null, hostname, JSON.stringify({ domainId, verificationExpiresAt: expiresAt }))
+    ]);
   } catch {
-    return json({ error: "HOSTNAME_ALREADY_RESERVED", message: "This hostname is already linked or has a pending request." }, 409);
+    const raced = await db.prepare("SELECT domain_id FROM business_custom_domains WHERE hostname=? COLLATE NOCASE AND status<>'removed'").bind(hostname).first();
+    if (raced) return json({ error: "HOSTNAME_ALREADY_RESERVED", message: "This hostname is already linked or has a pending request." }, 409);
+    return json({ error: "CUSTOM_DOMAIN_REQUEST_FAILED", message: "The custom domain request could not be saved. Please retry." }, 503);
   }
-  await event(db, businessId, "custom_domain_requested", access.account.account_id, null, hostname, { domainId, verificationExpiresAt: expiresAt });
   return json({
     ok: true,
     domain_id: domainId,
@@ -888,6 +891,7 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
       return json({ error: provision.errorCode, message: "Cloudflare for SaaS could not provision this hostname. Retry after checking the provider configuration." }, 503);
     }
     const result = provision.result;
+    if (!result?.id) return json({ error: "CLOUDFLARE_INVALID_RESPONSE", message: "Cloudflare did not return a hostname identifier; the hostname was not marked active." }, 503);
     const state = customHostnameState(result);
     const checkedAt = nowIso();
     await db.prepare("UPDATE business_custom_domains SET provider_hostname_id=?,provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
