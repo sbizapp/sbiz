@@ -28,7 +28,7 @@
 - Nameservers cụ thể và trạng thái zone trong Cloudflare Dashboard: chưa được cung cấp; ghi nhận riêng rằng domain đang theo cấu hình DNS mặc định Cloudflare.
 - Giá thuê bao đã chốt: USD 5/tháng hoặc USD 50/năm.
 - Hướng nền tảng ứng dụng: Cloudflare Workers, D1, R2; Cloudflare for SaaS cho custom domains; Paddle cho subscription billing quốc tế (theo kế hoạch tổng thể).
-- Chưa có bằng chứng trong hồ sơ này rằng Worker ứng dụng, Paddle hoặc môi trường production đã được tạo/cấu hình. KV, R2 và D1 đã được chủ sản phẩm xác nhận tạo.
+- Worker ứng dụng `sbiz` và domain `sbiz.app` đã được xác nhận trong Dashboard ngày 2026-10-23. Paddle chưa được xác minh. Dù KV, R2 và D1 đã tồn tại, ảnh Overview của Worker cho thấy 0 bindings; cấu hình binding từ Wrangler chưa được xác minh áp dụng vào runtime hiện tại.
 
 ## 2. Cấu hình SMTP Yandex — giá trị không bí mật
 
@@ -91,7 +91,7 @@ Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh
 - KV namespace: `SBIZ_APP_KV`; Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp).
 - Tên Worker thực tế trên Cloudflare Dashboard: `sbiz` (đã xác nhận ngày 2026-10-23). `wrangler.jsonc` phải giữ `name: "sbiz"`; không đổi sang `sbiz-app`.
 - Mã nguồn hiện tại: `worker.js` entry point cùng router/module trong branch `feature/mod01-cloudflare-access-admin`. Production endpoint `/health` cần được kiểm tra lại sau lần deploy từ branch này.
-- Binding names dự kiến khi cấu hình ứng dụng: `SBIZ_APP_KV` (KV), `SBIZ_APP_R2` (R2 bucket `sbiz-app-assets`), `SBIZ_APP_DB` (D1 database `sbiz-app-db`). Các binding chưa được cấu hình và bootstrap hiện tại chưa sử dụng chúng.
+- Binding names được khai báo trong `wrangler.jsonc`: `SBIZ_APP_KV` (KV), `SBIZ_APP_R2` (R2 bucket `sbiz-app-assets`), `SBIZ_APP_DB` (D1 database `sbiz-app-db`). Dashboard Overview của Worker `sbiz` hiện hiển thị 0 bindings; cần owner deploy source/config đã đồng bộ để áp dụng bindings. Chưa chạy migration D1.
 - Môi trường dự kiến: development, staging, production.
 - R2 bucket đã tạo: `sbiz-app-assets`; location `Asia-Pacific (APAC)`; default storage class `Standard`.
 - S3 API endpoint hiển thị trong Dashboard: `https://7568b3c0e09d949e021c486fa8199b63.r2.cloudflarestorage.com/sbiz-app-assets`.
@@ -173,10 +173,10 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Account ID và Zone ID được chủ sản phẩm cung cấp.
 - [ ] Account ID, Zone ID và trạng thái zone được xác minh trực tiếp trên dashboard/API.
 - [x] Ghi nhận trạng thái ban đầu: chưa có ứng dụng Worker.
-- [x] Mã nguồn bootstrap `worker.js` đã được lưu trong GitHub; chưa triển khai trên Cloudflare.
+- [x] Mã nguồn module hiện tại đã được lưu trong GitHub; chưa xác nhận source branch hiện tại đang chạy trên Cloudflare Production.
 - [x] Worker `sbiz` đã tồn tại trên Cloudflare Dashboard; Wrangler deployment history đã được đọc bằng `npx wrangler deployments list --name sbiz`.
 - [ ] Sau khi owner deploy branch đã đồng bộ, kiểm thử `GET /health`, `/admin`, và `/api/v1/admin/businesses`; lưu kết quả runtime.
-- [ ] Cấu hình bindings KV/R2/D1 sau khi Worker bootstrap được xác minh.
+- [ ] Owner deploy `feature/mod01-cloudflare-access-admin` vào Worker `sbiz`, sau khi xem xét cấu hình và xác nhận thời điểm deploy; kiểm tra bindings KV/R2/D1 sau deploy.
 - [x] D1 database `sbiz-app-db` đã được chủ sản phẩm xác nhận tạo; ID `8106266b-a132-4ccc-bce8-b386c027a8f7`.
 - [x] Dashboard D1 hiển thị 0 tables và chưa có dữ liệu ứng dụng.
 - [x] R2 bucket `sbiz-app-assets` đã được chủ sản phẩm xác nhận tạo; xem thông tin chi tiết ở mục R2.
