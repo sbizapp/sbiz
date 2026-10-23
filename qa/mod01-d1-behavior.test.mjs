@@ -404,3 +404,13 @@ test("localized email-change confirmation page renders without missing-copy erro
   assert.match(body, /Thiếu liên kết xác nhận\./);
   assert.doesNotMatch(body, /translations is not defined/);
 });
+
+test("dashboard exposes the email-change action and preserves its UI language", async () => {
+  const response = await worker.fetch(new Request("https://sbiz.app/pt/dashboard"), {}, { waitUntil() {} });
+  assert.equal(response.status, 200);
+  const body = await response.text();
+  assert.match(body, /Alterar e-mail da conta/);
+  assert.match(body, /Novo endereço de e-mail/);
+  assert.match(body, /uiLanguage:"pt"/);
+  assert.match(body, /\/api\/v1\/businesses\//);
+});
