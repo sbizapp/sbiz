@@ -419,3 +419,39 @@ test("dashboard exposes the email-change action and preserves its UI language", 
   assert.match(body, /uiLanguage:"pt"/);
   assert.match(body, /\/api\/v1\/businesses\//);
 });
+
+test("password reset rolls token consumption and password update back when session revocation fails", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const token = "atomic-password-reset-token-0123456789abcdef";
+  const tokenHash = await hashToken(token);
+  f.db.prepare("INSERT INTO password_reset_tokens (reset_id,account_id,token_hash,created_at,expires_at) VALUES (?,?,?,?,?)")
+    .bind("atomic-reset", "account-owner", tokenHash, now, future).run();
+  f.db.exec("CREATE TRIGGER force_session_revoke_failure BEFORE UPDATE ON auth_sessions WHEN NEW.revoked_at IS NOT NULL BEGIN SELECT RAISE(ABORT, 'forced session revoke failure'); END");
+  const before = f.db.prepare("SELECT password_hash FROM accounts WHERE account_id=?").bind("account-owner").first().password_hash;
+  const response = await worker.fetch(new Request("https://sbiz.app/api/v1/password/reset", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token, password: "A-strong-new-password-2026" }),
+  }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 503);
+  assert.equal(f.db.prepare("SELECT used_at FROM password_reset_tokens WHERE reset_id=?").bind("atomic-reset").first().used_at, null);
+  assert.equal(f.db.prepare("SELECT password_hash FROM accounts WHERE account_id=?").bind("account-owner").first().password_hash, before);
+});
+
+test("email confirmation rolls back token consumption and account email when audit write fails", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const token = "atomic-email-change-token-0123456789abcdef";
+  f.db.prepare("INSERT INTO email_change_requests (change_id,account_id,business_id,new_email,token_hash,created_at,expires_at) VALUES (?,?,?,?,?,?,?)")
+    .bind("atomic-email-change", "account-owner", "sbiz-000000001", "new-owner@example.test", await hashToken(token), now, future).run();
+  f.db.exec("CREATE TRIGGER force_email_audit_failure BEFORE INSERT ON business_events WHEN NEW.event_type='email_changed' BEGIN SELECT RAISE(ABORT, 'forced audit failure'); END");
+  const response = await worker.fetch(new Request("https://sbiz.app/api/v1/email/confirm", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token }),
+  }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 503);
+  assert.equal(f.db.prepare("SELECT email FROM accounts WHERE account_id=?").bind("account-owner").first().email, "owner@example.test");
+  assert.equal(f.db.prepare("SELECT used_at FROM email_change_requests WHERE change_id=?").bind("atomic-email-change").first().used_at, null);
+});
