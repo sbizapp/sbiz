@@ -742,6 +742,197 @@ async function adminBusiness(request, env, businessId) {
   return json({ error: "METHOD_NOT_ALLOWED" }, 405);
 }
 
+
+function normalizeCustomHostname(value) {
+  const raw = String(value || "").trim().toLowerCase().replace(/\.$/, "");
+  if (!raw || raw.length > 253 || /[\s/@?#]/.test(raw)) return null;
+  let parsed;
+  try { parsed = new URL("https://" + raw); } catch { return null; }
+  if (parsed.username || parsed.password || parsed.port || parsed.pathname !== "/" || parsed.search || parsed.hash) return null;
+  const hostname = parsed.hostname.toLowerCase().replace(/\.$/, "");
+  if (!hostname.includes(".") || hostname === "sbiz.app" || hostname.endsWith(".sbiz.app")) return null;
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.includes(":")) return null;
+  const labels = hostname.split(".");
+  if (labels.some(label => !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label))) return null;
+  if (!/^[a-z]{2,63}$/.test(labels[labels.length - 1])) return null;
+  return hostname;
+}
+
+async function requireBusinessOwner(request, env, businessId) {
+  const account = await currentAccount(request, env);
+  if (!account) return { response: json({ error: "UNAUTHENTICATED" }, 401) };
+  const business = await env.SBIZ_APP_DB.prepare("SELECT business_id FROM businesses WHERE business_id=?").bind(businessId).first();
+  if (!business) return { response: json({ error: "NOT_FOUND" }, 404) };
+  const membership = await env.SBIZ_APP_DB.prepare("SELECT role FROM business_memberships WHERE business_id=? AND account_id=?")
+    .bind(businessId, account.account_id).first();
+  if (!membership || membership.role !== "owner") return { response: json({ error: "OWNER_REQUIRED" }, 403) };
+  return { account };
+}
+
+async function listBusinessCustomDomains(request, env, businessId) {
+  const access = await requireBusinessOwner(request, env, businessId);
+  if (access.response) return access.response;
+  const result = await env.SBIZ_APP_DB.prepare(
+    "SELECT domain_id,business_id,hostname,status,verified_at,provider_status,ssl_status,last_provider_check_at,error_code,created_at,updated_at,removed_at FROM business_custom_domains WHERE business_id=? ORDER BY created_at DESC LIMIT 50"
+  ).bind(businessId).all();
+  return json({ domains: (result.results || []).map(row => ({ ...row, dns_record_name: "_sbiz-verification." + row.hostname })) });
+}
+
+async function createBusinessCustomDomain(request, env, businessId) {
+  const access = await requireBusinessOwner(request, env, businessId);
+  if (access.response) return access.response;
+  const input = await bodyJson(request);
+  const hostname = normalizeCustomHostname(input?.hostname);
+  if (!hostname) return json({ error: "INVALID_HOSTNAME", message: "Enter a valid public hostname, without a protocol or path. SBiz hostnames cannot be used as custom domains." }, 400);
+  const db = env.SBIZ_APP_DB;
+  const existing = await db.prepare("SELECT domain_id,status FROM business_custom_domains WHERE hostname=? COLLATE NOCASE AND status<>'removed'").bind(hostname).first();
+  if (existing) return json({ error: existing.status === "active" ? "HOSTNAME_ALREADY_ACTIVE" : "HOSTNAME_ALREADY_RESERVED", message: "This hostname is already linked or has a pending request." }, 409);
+  const count = await db.prepare("SELECT COUNT(*) AS total FROM business_custom_domains WHERE business_id=? AND status<>'removed'").bind(businessId).first();
+  if (Number(count?.total || 0) >= 10) return json({ error: "DOMAIN_LIMIT_REACHED", message: "A business can have up to 10 linked or pending custom hostnames." }, 409);
+  const token = randomToken(32);
+  const now = new Date();
+  const createdAt = now.toISOString();
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  const domainId = uuid();
+  try {
+    await db.prepare("INSERT INTO business_custom_domains (domain_id,business_id,hostname,status,verification_token_hash,verification_created_at,verification_expires_at,created_at,updated_at) VALUES (?,?,?,'pending_dns',?,?,?,?,?)")
+      .bind(domainId, businessId, hostname, await sha256(token), createdAt, expiresAt, createdAt, createdAt).run();
+  } catch {
+    return json({ error: "HOSTNAME_ALREADY_RESERVED", message: "This hostname is already linked or has a pending request." }, 409);
+  }
+  await event(db, businessId, "custom_domain_requested", access.account.account_id, null, hostname, { domainId, verificationExpiresAt: expiresAt });
+  return json({
+    ok: true,
+    domain_id: domainId,
+    hostname,
+    status: "pending_dns",
+    verification_expires_at: expiresAt,
+    dns: { type: "TXT", name: "_sbiz-verification." + hostname, value: "sbiz-domain-verification=" + token },
+    message: "Add the TXT record shown here, then verify the hostname. The challenge expires in 24 hours."
+  }, 201);
+}
+
+function customHostnameState(providerResult) {
+  const providerStatus = String(providerResult?.status || "unknown").toLowerCase();
+  const sslStatus = String(providerResult?.ssl?.status || "unknown").toLowerCase();
+  if (providerStatus === "active" && sslStatus === "active") return "active";
+  if (["pending_validation", "pending_issuance", "pending_deployment"].includes(providerStatus)) return providerStatus;
+  if (["pending_validation", "pending_issuance", "pending_deployment"].includes(sslStatus)) {
+    if (sslStatus === "pending_validation") return "pending_validation";
+    if (sslStatus === "pending_issuance") return "pending_issuance";
+    return "pending_deployment";
+  }
+  return "error";
+}
+
+async function cloudflareCustomHostname(env, method, hostname, providerId) {
+  const token = env.CLOUDFLARE_API_TOKEN;
+  const zoneId = env.CLOUDFLARE_ZONE_ID;
+  if (!token || !zoneId) return { configured: false };
+  const base = "https://api.cloudflare.com/client/v4/zones/" + encodeURIComponent(zoneId) + "/custom_hostnames";
+  const endpoint = providerId ? base + "/" + encodeURIComponent(providerId) : base;
+  const init = { method, headers: { authorization: "Bearer " + token, "content-type": "application/json", accept: "application/json" } };
+  if (method === "POST") init.body = JSON.stringify({ hostname, ssl: { method: "http", type: "dv" } });
+  let response;
+  try { response = await fetch(endpoint, init); }
+  catch { return { configured: true, ok: false, errorCode: "CLOUDFLARE_API_UNREACHABLE" }; }
+  const payload = await response.json().catch(() => null);
+  if (method === "DELETE" && response.status === 404) return { configured: true, ok: true, removed: true };
+  if (!response.ok || !payload?.success || (method !== "DELETE" && !payload.result)) {
+    return { configured: true, ok: false, errorCode: "CLOUDFLARE_API_ERROR", providerHttpStatus: response.status };
+  }
+  return { configured: true, ok: true, result: payload.result, removed: method === "DELETE" };
+}
+
+async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
+  const access = await requireBusinessOwner(request, env, businessId);
+  if (access.response) return access.response;
+  const db = env.SBIZ_APP_DB;
+  const domain = await db.prepare("SELECT * FROM business_custom_domains WHERE domain_id=? AND business_id=? AND status<>'removed'")
+    .bind(domainId, businessId).first();
+  if (!domain) return json({ error: "NOT_FOUND" }, 404);
+  const now = nowIso();
+  if (!domain.verified_at) {
+    if (domain.verification_expires_at <= now) return json({ error: "DNS_CHALLENGE_EXPIRED", message: "The DNS challenge expired. Remove this request and create a new one." }, 410);
+    let dnsResponse;
+    try {
+      dnsResponse = await fetch("https://cloudflare-dns.com/dns-query?name=" + encodeURIComponent("_sbiz-verification." + domain.hostname) + "&type=TXT", {
+        headers: { accept: "application/dns-json" },
+        cf: { cacheTtl: 0, cacheEverything: false }
+      });
+    } catch {
+      return json({ error: "DNS_LOOKUP_UNAVAILABLE", message: "DNS verification is temporarily unavailable. Please retry." }, 503);
+    }
+    if (!dnsResponse.ok) return json({ error: "DNS_LOOKUP_UNAVAILABLE", message: "DNS verification is temporarily unavailable. Please retry." }, 503);
+    const dns = await dnsResponse.json().catch(() => null);
+    const answers = Array.isArray(dns?.Answer) ? dns.Answer.filter(answer => Number(answer.type) === 16) : [];
+    let verified = false;
+    for (const answer of answers) {
+      const value = String(answer.data || "").replace(/^"|"$/g, "").replace(/"\s*"/g, "");
+      const prefix = "sbiz-domain-verification=";
+      if (value.startsWith(prefix) && await sha256(value.slice(prefix.length)) === domain.verification_token_hash) verified = true;
+    }
+    if (!verified) return json({ error: "DNS_CHALLENGE_NOT_FOUND", message: "The required TXT record was not found yet. Check the record name and value, then retry." }, 409);
+    await db.prepare("UPDATE business_custom_domains SET verified_at=?,status='pending_provider',error_code=NULL,updated_at=? WHERE domain_id=? AND verified_at IS NULL")
+      .bind(now, now, domainId).run();
+    await event(db, businessId, "custom_domain_dns_verified", access.account.account_id, null, domain.hostname, { domainId });
+  }
+
+  const refreshed = await db.prepare("SELECT * FROM business_custom_domains WHERE domain_id=? AND business_id=?").bind(domainId, businessId).first();
+  if (!refreshed.provider_hostname_id) {
+    const provision = await cloudflareCustomHostname(env, "POST", refreshed.hostname, null);
+    if (!provision.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "DNS ownership is verified, but Cloudflare for SaaS API credentials are not configured." }, 503);
+    if (!provision.ok) {
+      await db.prepare("UPDATE business_custom_domains SET status='error',error_code=?,updated_at=? WHERE domain_id=?")
+        .bind(provision.errorCode, nowIso(), domainId).run();
+      return json({ error: provision.errorCode, message: "Cloudflare for SaaS could not provision this hostname. Retry after checking the provider configuration." }, 503);
+    }
+    const result = provision.result;
+    const state = customHostnameState(result);
+    const checkedAt = nowIso();
+    await db.prepare("UPDATE business_custom_domains SET provider_hostname_id=?,provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
+      .bind(result.id, result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId).run();
+    await event(db, businessId, state === "active" ? "custom_domain_activated" : "custom_domain_provider_created", access.account.account_id, null, refreshed.hostname, { domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null });
+    return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null }, state === "active" ? 200 : 202);
+  }
+
+  const check = await cloudflareCustomHostname(env, "GET", refreshed.hostname, refreshed.provider_hostname_id);
+  if (!check.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "Cloudflare for SaaS API credentials are not configured." }, 503);
+  if (!check.ok) return json({ error: check.errorCode, message: "Cloudflare for SaaS status could not be checked. Retry later." }, 503);
+  const result = check.result;
+  const state = customHostnameState(result);
+  const checkedAt = nowIso();
+  await db.prepare("UPDATE business_custom_domains SET provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
+    .bind(result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId).run();
+  if (state === "active" && refreshed.status !== "active") await event(db, businessId, "custom_domain_activated", access.account.account_id, refreshed.status, refreshed.hostname, { domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null });
+  return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null }, state === "active" ? 200 : 202);
+}
+
+async function removeBusinessCustomDomain(request, env, businessId, domainId) {
+  const access = await requireBusinessOwner(request, env, businessId);
+  if (access.response) return access.response;
+  const db = env.SBIZ_APP_DB;
+  const domain = await db.prepare("SELECT * FROM business_custom_domains WHERE domain_id=? AND business_id=? AND status<>'removed'")
+    .bind(domainId, businessId).first();
+  if (!domain) return json({ error: "NOT_FOUND" }, 404);
+  const now = nowIso();
+  if (domain.provider_hostname_id) {
+    await db.prepare("UPDATE business_custom_domains SET status='removing',updated_at=? WHERE domain_id=?").bind(now, domainId).run();
+    const result = await cloudflareCustomHostname(env, "DELETE", domain.hostname, domain.provider_hostname_id);
+    if (!result.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "The provider hostname exists, but Cloudflare for SaaS API credentials are not configured. The domain remains in removing state." }, 503);
+    if (!result.ok) {
+      await db.prepare("UPDATE business_custom_domains SET status='error',error_code=?,updated_at=? WHERE domain_id=?")
+        .bind(result.errorCode, nowIso(), domainId).run();
+      return json({ error: result.errorCode, message: "Cloudflare for SaaS could not remove this hostname. Retry after checking the provider configuration." }, 503);
+    }
+  }
+  const removedAt = nowIso();
+  await db.prepare("UPDATE business_custom_domains SET status='removed',removed_at=?,updated_at=?,error_code=NULL WHERE domain_id=?")
+    .bind(removedAt, removedAt, domainId).run();
+  await event(db, businessId, "custom_domain_removed", access.account.account_id, domain.hostname, null, { domainId, providerHostnameId: domain.provider_hostname_id || null });
+  return json({ ok: true, domain_id: domainId, hostname: domain.hostname, status: "removed" });
+}
+
 async function routeMod01(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
