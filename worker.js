@@ -883,9 +883,12 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
       if (value.startsWith(prefix) && await sha256(value.slice(prefix.length)) === domain.verification_token_hash) verified = true;
     }
     if (!verified) return json({ error: "DNS_CHALLENGE_NOT_FOUND", message: "The required TXT record was not found yet. Check the record name and value, then retry." }, 409);
-    await db.prepare("UPDATE business_custom_domains SET verified_at=?,status='pending_provider',error_code=NULL,updated_at=? WHERE domain_id=? AND verified_at IS NULL")
-      .bind(now, now, domainId).run();
-    await event(db, businessId, "custom_domain_dns_verified", access.account.account_id, null, domain.hostname, { domainId });
+    await db.batch([
+      db.prepare("UPDATE business_custom_domains SET verified_at=?,status='pending_provider',error_code=NULL,updated_at=? WHERE domain_id=? AND verified_at IS NULL AND verification_expires_at>?")
+        .bind(now, now, domainId, now),
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) SELECT ?, ?, 'custom_domain_dns_verified', ?, ?, NULL, ?, ? WHERE EXISTS (SELECT 1 FROM business_custom_domains WHERE domain_id=? AND business_id=? AND verified_at=?) AND NOT EXISTS (SELECT 1 FROM business_events WHERE business_id=? AND event_type='custom_domain_dns_verified' AND metadata_json LIKE ?)")
+        .bind(uuid(), businessId, now, access.account.account_id, domain.hostname, JSON.stringify({ domainId }), domainId, businessId, now, businessId, "%" + domainId + "%")
+    ]);
   }
 
   const refreshed = await db.prepare("SELECT * FROM business_custom_domains WHERE domain_id=? AND business_id=?").bind(domainId, businessId).first();
@@ -901,9 +904,12 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
     if (!result?.id) return json({ error: "CLOUDFLARE_INVALID_RESPONSE", message: "Cloudflare did not return a hostname identifier; the hostname was not marked active." }, 503);
     const state = customHostnameState(result);
     const checkedAt = nowIso();
-    await db.prepare("UPDATE business_custom_domains SET provider_hostname_id=?,provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
-      .bind(result.id, result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId).run();
-    await event(db, businessId, state === "active" ? "custom_domain_activated" : "custom_domain_provider_created", access.account.account_id, null, refreshed.hostname, { domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null });
+    await db.batch([
+      db.prepare("UPDATE business_custom_domains SET provider_hostname_id=?,provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
+        .bind(result.id, result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId),
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) SELECT ?, ?, ?, ?, ?, NULL, ?, ? WHERE EXISTS (SELECT 1 FROM business_custom_domains WHERE domain_id=? AND provider_hostname_id=? AND status=?)")
+        .bind(uuid(), businessId, state === "active" ? "custom_domain_activated" : "custom_domain_provider_created", checkedAt, access.account.account_id, refreshed.hostname, JSON.stringify({ domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null }), domainId, result.id, state)
+    ]);
     return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null }, state === "active" ? 200 : 202);
   }
 
@@ -913,9 +919,15 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
   const result = check.result;
   const state = customHostnameState(result);
   const checkedAt = nowIso();
-  await db.prepare("UPDATE business_custom_domains SET provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
-    .bind(result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId).run();
-  if (state === "active" && refreshed.status !== "active") await event(db, businessId, "custom_domain_activated", access.account.account_id, refreshed.status, refreshed.hostname, { domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null });
+  const refreshStatements = [
+    db.prepare("UPDATE business_custom_domains SET provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
+      .bind(result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId)
+  ];
+  if (state === "active" && refreshed.status !== "active") {
+    refreshStatements.push(db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?, ?, 'custom_domain_activated', ?, ?, ?, ?, ?)")
+      .bind(uuid(), businessId, checkedAt, access.account.account_id, refreshed.status, refreshed.hostname, JSON.stringify({ domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null })));
+  }
+  await db.batch(refreshStatements);
   return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null }, state === "active" ? 200 : 202);
 }
 
@@ -938,9 +950,12 @@ async function removeBusinessCustomDomain(request, env, businessId, domainId) {
     }
   }
   const removedAt = nowIso();
-  await db.prepare("UPDATE business_custom_domains SET status='removed',removed_at=?,updated_at=?,error_code=NULL WHERE domain_id=?")
-    .bind(removedAt, removedAt, domainId).run();
-  await event(db, businessId, "custom_domain_removed", access.account.account_id, domain.hostname, null, { domainId, providerHostnameId: domain.provider_hostname_id || null });
+  await db.batch([
+    db.prepare("UPDATE business_custom_domains SET status='removed',removed_at=?,updated_at=?,error_code=NULL WHERE domain_id=?")
+      .bind(removedAt, removedAt, domainId),
+    db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?, ?, 'custom_domain_removed', ?, ?, ?, NULL, ?)")
+      .bind(uuid(), businessId, removedAt, access.account.account_id, domain.hostname, JSON.stringify({ domainId, providerHostnameId: domain.provider_hostname_id || null }))
+  ]);
   return json({ ok: true, domain_id: domainId, hostname: domain.hostname, status: "removed" });
 }
 
