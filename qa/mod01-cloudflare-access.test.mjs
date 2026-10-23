@@ -273,7 +273,7 @@ test("Worker admits a valid Access JWT to the protected admin API", async () => 
   });
 });
 
-test("Admin page exposes the approved Liquid Glass styling in light and dark themes", async () => {
+test("Admin page follows the minimal white UI standard", async () => {
   await withMockAccessJwks(async () => {
     const token = await makeAccessToken();
     const response = await worker.fetch(
@@ -290,13 +290,13 @@ test("Admin page exposes the approved Liquid Glass styling in light and dark the
     );
     assert.equal(response.status, 200);
     const page = await response.text();
-    assert.match(page, /--glass-surface:rgba\(255,255,255,\.75\)/);
-    assert.match(page, /backdrop-filter:blur\(var\(--glass-blur\)\) saturate\(140%\)/);
-    assert.match(page, /\.panel:before,\.detail:before/);
-    assert.match(page, /\.table-wrap\{background:rgba\(255,255,255,\.12\)\}/);
-    assert.match(page, /tbody tr:hover\{background:rgba\(255,255,255,\.32\)\}/);
-    assert.match(page, /@media\(prefers-color-scheme:dark\)/);
-    assert.match(page, /@media\(max-width:600px\)/);
-    assert.match(page, /prefers-reduced-motion:reduce/);
+    assert.match(page, /font-family:Roboto,Arial,sans-serif/);
+    assert.match(page, /--ui-surface:#fff/);
+    assert.match(page, /--ui-border:#e5e7eb/);
+    assert.match(page, /--ui-shadow:0 1px 2px rgba\(0,0,0,.05\)/);
+    assert.match(page, /background:#fff/);
+    assert.match(page, /@media\(max-width:640px\)/);
+    assert.doesNotMatch(page, /backdrop-filter|--glass|linear-gradient|prefers-color-scheme:dark/);
+    assert.doesNotMatch(page, /background[^;]*url\(["']?\/assets\/background-/);
   });
 });
