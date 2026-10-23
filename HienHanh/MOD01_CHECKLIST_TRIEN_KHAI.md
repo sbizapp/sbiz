@@ -5,6 +5,7 @@
 **Current verification branch:** `cleanup/repository-organization-2026-10-23`  
 **Last owner-tested HEAD:** `a94ea8405756499da30c9c00d1502a542c0ffc6f`  
 **Last owner-run test result:** `npm test` passed all 37 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 13/13. This includes registration/verification, password-reset/session revocation, email-change confirmation/replay, and business-ID capacity exhaustion. The capacity test confirms `503 BUSINESS_ID_CAPACITY_REACHED`, no partial account/business records, retained pending request and unchanged sequence. Node experimental-loader warnings did not fail tests.  
+**Current code after that tested HEAD:** locale-prefixed account flows and translated copy, dashboard email-change action and traceability fields, admin slug-history display, and atomic rollback for password-reset/email-change token consumption have been committed. New regression tests are **pending Owner execution**; the 37/37 result above does not cover these changes.  
 **Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` has not been applied to remote D1. Live runtime/production parity remains unverified.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
@@ -113,6 +114,14 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 8. Verify Access-authorized access to the business traceability record and document URL update.
 9. Verify event rows retain business creation, email verification, email changes, admin document-link changes and verification approval.
 
+
+## Follow-up account-flow completion work (2026-10-23)
+
+- Locale-prefixed paths `/vi`, `/id`, `/es`, and `/pt` preserve the selected UI language through Create/Login, verification, password reset, email-change confirmation and dashboard routes. The main account screens and dashboard copy have translations for all five supported languages; API response messages and system-admin UI remain English.
+- Dashboard includes an email-change request form and displays business verification/subscription/data-deletion timestamps when present.
+- Admin business detail includes slug history in addition to event history.
+- Password reset and email-change confirmation now use transactional D1 batches for one-time-token consumption plus dependent updates/audit writes. Regression tests simulate downstream write failures and assert rollback.
+- Run `npm test` on the current branch HEAD. These changes have not yet been Owner-tested. MOD01 Part 1 is not yet fully accepted: public old-slug resolution, custom-domain provider lifecycle, product-slug integration with the product module, operational-data purge, and live Cloudflare/SMTP verification remain open.
 
 ## Slug-history change (2026-10-23)
 
