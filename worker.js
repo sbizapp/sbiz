@@ -432,6 +432,8 @@ async function verifyRegistration(request, env) {
       .bind(accountId, pending.email, hash, timestamp, timestamp, timestamp),
     db.prepare("INSERT INTO businesses (business_id,account_id,current_slug,default_language,created_at,verified_at,status) SELECT 'sbiz-' || printf('%09d', next_value), ?, ?, ?, ?, ?, 'active' FROM business_id_sequence WHERE sequence_name='business' AND next_value<=999999999")
       .bind(accountId, pending.requested_slug, pending.default_language, timestamp, timestamp),
+    db.prepare("INSERT INTO business_slug_history (slug_history_id,business_id,slug,valid_from,valid_to,changed_by_account_id,change_source) SELECT ?, business_id, current_slug, created_at, NULL, ?, 'registration' FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?")
+      .bind(uuid(), accountId, accountId, timestamp, pending.requested_slug),
     db.prepare("INSERT INTO business_memberships (business_id,account_id,role,created_at) SELECT business_id, ?, 'owner', ? FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?")
       .bind(accountId, timestamp, accountId, timestamp, pending.requested_slug),
     db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,metadata_json) SELECT ?, business_id, 'business_created', ?, ?, ? FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?")
