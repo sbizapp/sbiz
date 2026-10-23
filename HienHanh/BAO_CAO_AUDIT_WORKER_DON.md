@@ -57,11 +57,10 @@ These are code and repository changes only. The new migration has **not** been a
 
 ## 5. Safe next execution order
 
-1. **Completed:** owner ran `npm test` on exact HEAD `153ece4889d0d13eb9340f79cd84fa7ceb708b7f`; all 36 tests passed.
-2. **Pending owner test run:** run the business ID capacity-exhaustion test added in commit `a4f7e619fb557f723a988c4235d74dc815a53758`.
-3. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
-4. Expand the dashboard into the full subscription-aware control center only when the authoritative subscription/entitlement rules and corresponding approved segment scenario are ready.
-5. Implement remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion, and retention/purge behavior, without inventing unresolved product rules.
-6. Owner verifies Cloudflare Access policy, secrets, bindings and live runtime. Deployment and remote migrations remain owner-controlled.
+1. **Completed:** owner ran `npm test` on exact HEAD `a94ea8405756499da30c9c00d1502a542c0ffc6f`; all 37 tests passed, including the business ID capacity-exhaustion test.
+2. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
+3. Expand the dashboard into the full subscription-aware control center only when the authoritative subscription/entitlement rules and corresponding approved segment scenario are ready.
+4. Implement remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion, and retention/purge behavior, without inventing unresolved product rules.
+5. Owner verifies Cloudflare Access policy, secrets, bindings and live runtime. Deployment and remote migrations remain owner-controlled.
 
 No production deployment, remote migration, Cloudflare resource change, or workflow run was performed.
