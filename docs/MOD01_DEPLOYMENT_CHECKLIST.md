@@ -1,7 +1,7 @@
 # MODUL 01 — build and owner deployment checklist
 
 **Branch:** `feature/mod01-cloudflare-access-admin`  
-**Status:** Source prepared; local checks and live Cloudflare deployment still required.  
+**Status (2026-10-23):** Source and Access tests exist on this branch. Production Worker is named `sbiz`; live Access redirect was observed, but current production routes returned `Not Found`, so the deployed code has not yet been proven to match this branch. Owner-controlled redeployment and runtime verification are still required.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
 ## Files added/changed
@@ -11,7 +11,7 @@
 - `src/shared/cloudflare-access.js` — cryptographic Cloudflare Access JWT verification.
 - `src/modules/mod01.js` — minimal Create/Login/verification/password-reset pages and account/business traceability API.
 - `src/router.js` — route integration.
-- `wrangler.jsonc` — Worker name, existing D1/KV/R2 bindings, migration directory and non-secret SMTP settings.
+- `wrangler.jsonc` — Worker name `sbiz`, existing D1/KV/R2 bindings, migration directory, non-secret SMTP settings, and the confirmed Cloudflare Access team domain/AUD.
 - `package.json` — Wrangler and basic syntax-check/migration scripts.
 
 ## Required secrets and bindings
@@ -44,7 +44,7 @@ Before deploying this branch, configure the Access application in the Cloudflare
 2. Protect hostname `sbiz.app` with path coverage for `/admin`, `/admin/*`, `/api/v1/admin`, and `/api/v1/admin/*`. If the dashboard accepts path patterns, ensure both the exact paths and nested paths are covered.
 3. Create an **Allow** policy restricted to the owner's exact identity or an explicitly approved admin group. Do not use a broad `Everyone` allow policy.
 4. Copy the Access application's **AUD tag** and the team's `<team-name>.cloudflareaccess.com` domain.
-5. Add those values to the `CF_ACCESS_AUD` and `CF_ACCESS_TEAM_DOMAIN` entries in `wrangler.jsonc`. Do not use example placeholders as live values.
+5. The confirmed team domain and AUD are now recorded in `wrangler.jsonc`; keep them aligned with the Access application if the application is recreated.
 6. Keep the application fail-closed until both values are set. The Worker independently validates the Access JWT, so direct requests to the Worker cannot bypass the Access policy merely by supplying an email header.
 7. Confirm the Access application is configured before owner-authorized deployment. This branch does not create or modify the Access application in Cloudflare.
 
@@ -56,7 +56,7 @@ From a clean checkout of this branch:
 npm install
 npm run check
 npm run test:access
-npx wrangler d1 migrations apply sbiz-app-db --remote
+# Do not run remote migrations for this Access/runtime check. Run only after explicit owner approval and database review.
 ```
 
 Review the target database/account before the remote migration. The migration is intended to create tables and indexes; do not run it against an unintended database.
@@ -98,12 +98,12 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 
 ## Post-deploy verification
 
-1. Open `/health` and confirm HTTP 200.
+1. Open `/health` and confirm HTTP 200 with `service: "sbiz"` and `phase: "mod01"`.
 2. Open `/`, `/create`, and `/login`.
 3. Confirm the Worker Cron Trigger is present (hourly at minute 17).
 4. Submit a test registration using a controlled mailbox and a valid unique slug.
 5. Confirm the email arrives, open the link within 30 minutes, set a password, and verify the account/business rows in D1.
 6. Test duplicate email, duplicate slug, invalid slug, expired token, failed SMTP, wrong password, forgot-password neutral response, and one-time reset-token behavior.
-7. Verify `/admin` and every `/api/v1/admin/*` endpoint are blocked without a valid Access JWT and work only with a valid JWT from the intended Access application. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header.
+7. Verify `/admin` returns the placeholder HTML (not `Not Found`) and `/api/v1/admin/businesses?limit=50` returns `{\"businesses\": [...]}` with valid Access; verify both are blocked without a valid Access JWT. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header.
 8. Verify Access-authorized access to the business traceability record and document URL update.
 9. Verify event rows retain business creation, email verification, email changes, admin document-link changes and verification approval.
