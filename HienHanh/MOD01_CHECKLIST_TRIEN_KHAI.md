@@ -1,10 +1,11 @@
 # MODUL 01 — build and owner deployment checklist
 
-> **Single-file update (2026-10-23):** The canonical deployment source for the owner Dashboard workflow is now root `worker.js` on `feature/mod01-single-file-worker`. The earlier `src/...` file list below is historical context from the modular implementation and is superseded; those runtime source files have been consolidated and removed from this branch. The D1 migration, `wrangler.jsonc`, QA files, and documentation remain separate. No production deployment has been performed.
+> **Current verification source (2026-10-23):** Root `worker.js` is the self-contained Worker source under the approved single-file workflow. The current branch being verified is `cleanup/repository-organization-2026-10-23`; the earlier `feature/mod01-single-file-worker` and `feature/mod01-cloudflare-access-admin` references describe prior source lineage. SQL migrations, `wrangler.jsonc`, QA files and product documents remain separate. No production deployment has been performed.
 
-**Canonical handoff branch:** `feature/mod01-single-file-worker`  
-**Prior modular branch:** `feature/mod01-cloudflare-access-admin`  
-**Status (2026-10-23):** Source contains account/authentication flows and an admin business dashboard. This branch also adds slug-history migration/code/tests, but automated tests have not yet been run in this environment and migration 0002 has not been applied remotely. Live runtime/production parity remains unverified; owner-controlled migration/deployment and runtime verification are still required.  
+**Current verification branch:** `cleanup/repository-organization-2026-10-23`  
+**Verified HEAD:** `3aeb3c6496c0d095a9cd1f60b528d60e2ffd54a3`  
+**Test status (owner-run):** `npm test` passed all 30 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 6/6.  
+**Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` has not been applied to remote D1. Live runtime/production parity remains unverified.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
 ## Files added/changed
