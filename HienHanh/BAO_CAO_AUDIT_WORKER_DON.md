@@ -55,8 +55,8 @@ These are code and repository changes only. The new migration has **not** been a
 
 1. Run `npm install` and `npm test` on this exact branch/HEAD; fix any failures.
 2. Review and apply migration 0002 to the intended D1 database only after the owner confirms the target and migration state. Do not deploy code that references `business_slug_history` before the table exists.
-3. Add behavioral D1 tests for registration/slug changes and race/failure cases.
-4. Implement the business dashboard from authoritative account/business data.
+3. Add behavioral D1 tests for registration/slug/language changes and race/failure cases.
+4. Expand the dashboard into the full subscription-aware control center after subscription data and entitlement rules are implemented.
 5. Implement the remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion and retention/purge behavior.
 6. Owner verifies Cloudflare Access policy, secrets, bindings and live runtime. Deployment and remote migrations remain owner-controlled.
 
