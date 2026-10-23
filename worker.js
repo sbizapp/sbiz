@@ -228,6 +228,7 @@ const html = (body, status = 200, headers = {}) => new Response(body, {
   status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'", ...headers }
 });
 const nowIso = () => new Date().toISOString();
+const uniqueTimestamp = () => new Date().toISOString().replace(/\.(\d{3})Z$/, (_, millis) => "." + millis + String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0") + "Z");
 const uuid = () => crypto.randomUUID();
 const normalizeEmail = value => String(value ?? "").trim().toLowerCase();
 const normalizeSlug = value => String(value ?? "").trim().toLowerCase();
@@ -545,13 +546,21 @@ async function resetPassword(request, env) {
   if (!row) return json({ error: "RESET_EXPIRED", message: "This reset link is invalid or expired. Request a new link." }, 410);
   const hash = await passwordHash(password);
   const now = nowIso();
-  const consumed = await db.prepare("UPDATE password_reset_tokens SET used_at=? WHERE reset_id=? AND used_at IS NULL AND expires_at>? RETURNING reset_id")
-    .bind(now, row.reset_id, now).first();
-  if (!consumed) return json({ error: "RESET_EXPIRED", message: "This reset link has already been used or expired." }, 410);
-  await db.batch([
-    db.prepare("UPDATE accounts SET password_hash=?,updated_at=? WHERE account_id=?").bind(hash, now, row.account_id),
-    db.prepare("UPDATE auth_sessions SET revoked_at=? WHERE account_id=? AND revoked_at IS NULL").bind(now, row.account_id)
-  ]);
+  const usedAt = uniqueTimestamp();
+  try {
+    await db.batch([
+      db.prepare("UPDATE password_reset_tokens SET used_at=? WHERE reset_id=? AND used_at IS NULL AND expires_at>? AND EXISTS (SELECT 1 FROM accounts WHERE account_id=?)")
+        .bind(usedAt, row.reset_id, now, row.account_id),
+      db.prepare("UPDATE accounts SET password_hash=?,updated_at=? WHERE account_id=? AND EXISTS (SELECT 1 FROM password_reset_tokens WHERE reset_id=? AND used_at=?)")
+        .bind(hash, now, row.account_id, row.reset_id, usedAt),
+      db.prepare("UPDATE auth_sessions SET revoked_at=? WHERE account_id=? AND revoked_at IS NULL AND EXISTS (SELECT 1 FROM password_reset_tokens WHERE reset_id=? AND used_at=?)")
+        .bind(now, row.account_id, row.reset_id, usedAt)
+    ]);
+  } catch {
+    return json({ error: "RESET_FAILED", message: "The password could not be reset. Request a new link if this continues." }, 503);
+  }
+  const updated = await db.prepare("SELECT password_hash FROM accounts WHERE account_id=?").bind(row.account_id).first();
+  if (!updated || updated.password_hash !== hash) return json({ error: "RESET_EXPIRED", message: "This reset link has already been used or expired." }, 410);
   return json({ ok: true, message: "Password reset. Please log in with your new password." });
 }
 
