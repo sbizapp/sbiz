@@ -39,7 +39,7 @@ test("only a business owner can change the primary language through the MOD01 ro
   assert.match(worker, /async function updateBusinessLanguage\(request, env, businessId\)/);
   assert.match(worker, /membership\.role !== "owner"/);
   assert.match(worker, /primary_language_changed/);
-  assert.match(worker, /\/api\/v1\/businesses\\\/(sbiz-\\d\{9\})\\\/language/);
+  assert.match(worker, /languageMatch && request\.method === "PATCH"/);
 });
 test("dashboard exposes the five supported primary-language choices", () => {
   for (const code of ["en", "vi", "id", "es", "pt"]) assert.match(worker, new RegExp('\\["' + code + '"'));
