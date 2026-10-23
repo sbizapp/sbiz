@@ -57,15 +57,17 @@ These are code and repository changes only. The new migration has **not** been a
 - Builder subsequently committed localized account routing/copy, dashboard email-change and traceability controls, protected admin slug-history display, and atomic password-reset/email-change confirmation changes, plus new regression tests. **Owner test execution is pending on the current branch HEAD.** The earlier 37/37 result applies only to `a94ea8405756499da30c9c00d1502a542c0ffc6f` and must not be treated as verification of these later changes.
 - The D1 behavior suite covers password-reset one-time-token/session revocation and email-change confirmation/event/replay in addition to registration, slug-history, language authorization and account lookup behaviors. This is owner-reported local test evidence at the exact HEAD above. It does not verify Cloudflare live runtime, SMTP delivery, remote D1 parity, migration application, or production deployment.
 - Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
-- Migration `0002_mod01_business_slug_history.sql` has **not** been applied to remote D1.
+- Migrations `0002_mod01_business_slug_history.sql` and `0003_mod01_custom_domain_lifecycle.sql` have **not** been applied to remote D1.
 - Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
 
 ## 5. Safe next execution order
 
 1. **Pending:** Owner runs `npm test` on the current branch HEAD after the Builder's latest changes; fix any failures using the actual output. The last verified 37/37 result is only at `a94ea8405756499da30c9c00d1502a542c0ffc6f`.
-2. Review migration history and the intended D1 target; apply migration 0002 only after the Owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
-3. Resolve remaining MOD01 Part 1 acceptance gaps before claiming full acceptance: safe old-slug routing once a public business-page resolver exists; custom-domain lifecycle with real Cloudflare for SaaS provider-state verification; product-slug history integrated with the product module's stable `product_id`; and operational-data purge that preserves the required traceability record. Do not simulate provider activation or delete data without an authoritative target/retention rule.
-4. Complete the subscription-aware dashboard only when the authoritative subscription/entitlement rules and corresponding approved segment scenario are ready.
-5. Owner verifies Cloudflare Access policy, secrets, bindings, SMTP and live runtime. Deployment and remote migrations remain Owner-controlled.
+2. Review migration history and the intended D1 target. Migrations 0002 and 0003 must be reviewed and explicitly approved by the Owner before remote application. Do not deploy the Worker before required schema migrations exist.
+3. Owner runs `npm test` on the current branch HEAD. The Builder's static parse/render smoke checks are not a substitute for the repository's Node/D1 suite.
+4. Complete Cloudflare for SaaS validation using owner-configured `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID`; confirm zone fallback-origin and real certificate/routing behavior in the Cloudflare dashboard. The code deliberately leaves a domain non-active if the provider is not configured or reports pending/error.
+5. Resolve remaining MOD01 Part 1 gaps: public old-slug routing once the public business-page resolver exists; product-slug history integrated with the approved stable `product_id` schema; and operational-data purge after the operational table scope and retention policy are defined. Do not simulate provider activation or delete data without an authoritative target/retention rule.
+6. Complete the subscription-aware dashboard only when the authoritative subscription/entitlement rules and approved segment scenario are ready.
+7. Owner verifies Cloudflare Access policy, secrets, bindings, SMTP and live runtime. Deployment and remote migrations remain Owner-controlled.
 
 No production deployment, remote migration, Cloudflare resource change, or workflow run was performed.
