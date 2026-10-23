@@ -24,6 +24,8 @@
 - Added `qa/mod01-slug-history-contract.test.mjs` and wired it into `npm run check` and `npm run test:slug-history`.
 - Fixed the admin detail panel so it is hidden until a business is selected.
 - Corrected the admin verification filter to include the actual `unverified` and `rejected` states.
+- Replaced the session-only dashboard with a responsive account/business overview that reads the authenticated email, business IDs, current slugs, L1, status, creation date and email-verification date from `/api/v1/me`.
+- Added a unified `npm test` command for syntax checks, slug-history contract tests and Cloudflare Access tests.
 
 These are code and repository changes only. The new migration has **not** been applied to the remote D1 database.
 
@@ -35,7 +37,7 @@ These are code and repository changes only. The new migration has **not** been a
 4. **Product slug:** product IDs/slug history/redirect behavior are not implemented in this MOD01 Worker slice.
 5. **Subscription lifecycle:** the schema can store subscription history, but verified purchase/renewal/expiry ingestion and lifecycle state transitions are not implemented. Paddle integration is absent.
 6. **Data purge:** scheduled cleanup only removes expired temporary registrations, change/reset tokens, stale sessions and rate-limit records. It does not implement business operational-data purging or the required retained traceability policy.
-7. **Dashboard completeness:** the logged-in dashboard is a minimal session check, not the planned business control center with account/business status, subscription information, language status and links to product modules.
+7. **Dashboard completeness:** the logged-in dashboard now shows account/business identity, current slug, L1, status and key dates. It is still not the full planned control center: subscription term/status, L2 entitlement, verification workflow state, actionable alerts and navigation to the future product modules are missing.
 8. **Admin authorization policy:** the Worker verifies the Access JWT, but it does not enforce a code-level owner-email allowlist. The Cloudflare Access application policy must restrict `/admin` and `/api/v1/admin/*` to the owner's approved identity/admin group. This policy has not been independently verified during this audit.
 9. **SMTP/runtime:** credentials are not in Git, which is correct, but secret presence/validity and real delivery are not verified.
 10. **Migration/runtime:** neither the new migration nor the current Worker has been deployed or verified against the live D1/runtime in this pass.
@@ -50,7 +52,7 @@ These are code and repository changes only. The new migration has **not** been a
 
 ## 5. Safe next execution order
 
-1. Run `npm install`, `npm run check`, `npm run test:slug-history`, and `npm run test:access` on this exact branch/HEAD; fix any failures.
+1. Run `npm install` and `npm test` on this exact branch/HEAD; fix any failures.
 2. Review and apply migration 0002 to the intended D1 database only after the owner confirms the target and migration state. Do not deploy code that references `business_slug_history` before the table exists.
 3. Add behavioral D1 tests for registration/slug changes and race/failure cases.
 4. Implement the business dashboard from authoritative account/business data.
