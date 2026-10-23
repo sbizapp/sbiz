@@ -22,6 +22,13 @@ CREATE TABLE IF NOT EXISTS accounts (
 );
 CREATE INDEX IF NOT EXISTS idx_accounts_status ON accounts(status);
 
+CREATE TRIGGER IF NOT EXISTS trg_accounts_require_business_id_capacity
+BEFORE INSERT ON accounts
+WHEN (SELECT next_value FROM business_id_sequence WHERE sequence_name='business') > 999999999
+BEGIN
+  SELECT RAISE(ABORT, 'BUSINESS_ID_CAPACITY_REACHED');
+END;
+
 CREATE TABLE IF NOT EXISTS businesses (
   business_id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL,
