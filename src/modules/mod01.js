@@ -194,26 +194,34 @@ async function verifyRegistration(request, env) {
   const slugDuplicate = await db.prepare("SELECT business_id FROM businesses WHERE current_slug=? COLLATE NOCASE").bind(pending.requested_slug).first();
   if (duplicate || slugDuplicate) return json({ error: duplicate ? "EMAIL_ALREADY_USED" : "SLUG_UNAVAILABLE", message: "The registration details are no longer available. Please register again." }, 409);
 
-  const seq = await db.prepare("UPDATE business_id_sequence SET next_value=next_value+1 WHERE sequence_name='business' AND next_value<=999999999 RETURNING next_value-1 AS allocated").first();
-  if (!seq) return json({ error: "BUSINESS_ID_CAPACITY_REACHED" }, 503);
-  const businessId = "sbiz-" + String(seq.allocated).padStart(9, "0");
   const accountId = uuid();
   const timestamp = nowIso();
   const hash = await passwordHash(password);
   const statements = [
-    db.prepare("INSERT INTO accounts (account_id,email,password_hash,email_verified_at,status,created_at,updated_at) VALUES (?,?,?,?, 'active',?,?)").bind(accountId, pending.email, hash, timestamp, timestamp, timestamp),
-    db.prepare("INSERT INTO businesses (business_id,account_id,current_slug,default_language,created_at,verified_at,status) VALUES (?,?,?,?,?,?, 'active')").bind(businessId, accountId, pending.requested_slug, pending.default_language, timestamp, timestamp),
-    db.prepare("INSERT INTO business_memberships (business_id,account_id,role,created_at) VALUES (?,?, 'owner',?)").bind(businessId, accountId, timestamp),
-    db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,metadata_json) VALUES (?,?, 'business_created',?,?,?)").bind(uuid(), businessId, timestamp, accountId, JSON.stringify({ source: "email_verification", language: pending.default_language })),
-    db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,metadata_json) VALUES (?,?, 'email_verified',?,?,?)").bind(uuid(), businessId, timestamp, accountId, JSON.stringify({ email: pending.email })),
+    db.prepare("INSERT INTO accounts (account_id,email,password_hash,email_verified_at,status,created_at,updated_at) VALUES (?,?,?,?, 'active',?,?)")
+      .bind(accountId, pending.email, hash, timestamp, timestamp, timestamp),
+    db.prepare("INSERT INTO businesses (business_id,account_id,current_slug,default_language,created_at,verified_at,status) SELECT 'sbiz-' || printf('%09d', next_value), ?, ?, ?, ?, ?, 'active' FROM business_id_sequence WHERE sequence_name='business' AND next_value<=999999999")
+      .bind(accountId, pending.requested_slug, pending.default_language, timestamp, timestamp),
+    db.prepare("INSERT INTO business_memberships (business_id,account_id,role,created_at) SELECT business_id, ?, 'owner', ? FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?")
+      .bind(accountId, timestamp, accountId, timestamp, pending.requested_slug),
+    db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,metadata_json) SELECT ?, business_id, 'business_created', ?, ?, ? FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?")
+      .bind(uuid(), timestamp, accountId, JSON.stringify({ source: "email_verification", language: pending.default_language }), accountId, timestamp, pending.requested_slug),
+    db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,metadata_json) SELECT ?, business_id, 'email_verified', ?, ?, ? FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?")
+      .bind(uuid(), timestamp, accountId, JSON.stringify({ email: pending.email }), accountId, timestamp, pending.requested_slug),
+    db.prepare("UPDATE business_id_sequence SET next_value=next_value+1 WHERE sequence_name='business' AND EXISTS (SELECT 1 FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?)")
+      .bind(accountId, timestamp, pending.requested_slug),
     db.prepare("DELETE FROM registration_requests WHERE request_id=?").bind(pending.request_id)
   ];
   try {
     await db.batch(statements);
   } catch {
+    const sequence = await db.prepare("SELECT next_value FROM business_id_sequence WHERE sequence_name='business'").first();
+    if (sequence && sequence.next_value > 999999999) return json({ error: "BUSINESS_ID_CAPACITY_REACHED" }, 503);
     return json({ error: "ACCOUNT_CREATION_FAILED", message: "Email verification succeeded, but account creation could not be completed. Please retry this link if it has not expired." }, 503);
   }
-  return json({ ok: true, message: "Email verified and account created. You can now log in." }, 201);
+  const createdBusiness = await db.prepare("SELECT business_id FROM businesses WHERE account_id=? AND created_at=? AND current_slug=?").bind(accountId, timestamp, pending.requested_slug).first();
+  if (!createdBusiness) return json({ error: "ACCOUNT_CREATION_FAILED", message: "The account could not be confirmed. Please contact support if this continues." }, 503);
+  return json({ ok: true, business_id: createdBusiness.business_id, message: "Email verified and account created. You can now log in." }, 201);
 }
 
 async function login(request, env) {
