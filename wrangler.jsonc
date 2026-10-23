@@ -29,5 +29,10 @@
     "SMTP_HOST": "smtp.yandex.com",
     "SMTP_PORT": "465",
     "SMTP_USER_NOREPLY": "no-reply@sbiz.app"
+  },
+  "triggers": {
+    "crons": [
+      "17 * * * *"
+    ]
   }
 }
