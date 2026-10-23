@@ -48,7 +48,8 @@ These are code and repository changes only. The new migration has **not** been a
 - Source and configuration review: **performed**.
 - Slug-history migration and code hooks: **added; migration/backfill and update SQL shape smoke-tested against a minimal local SQLite schema; not executed against D1**.
 - Owner ran `npm test` on exact HEAD `3921c4bb8f1a6a484f1c7d1fe1d08e6ab785666f` on branch `cleanup/repository-organization-2026-10-23`. Reported result: syntax checks passed; slug-history tests 7/7; Cloudflare Access tests 17/17; SQLite-backed D1 behavior tests 10/10. **Total: 34/34 tests passed** across the four checks. The Node experimental-loader deprecation warning appeared but did not fail tests.
-- The D1 behavior suite covers `/api/v1/me`, owner-only L1 updates, audit-event persistence, slug-history updates, slug conflict non-mutation, invalid-language rejection, invalid registration slug, SMTP-send failure cleanup, expired registration token, successful registration record creation, and one-time token replay rejection. This is owner-reported local test evidence at the exact HEAD above. It does not verify Cloudflare live runtime, SMTP delivery, remote D1 parity, migration application, or production deployment.
+- Follow-up test commit `ae04531d598309b8d164e7145d62de42e58e4a22` adds two D1 behavior tests: password-reset one-time-token/session revocation and email-change confirmation/event/replay. These additions are **pending owner execution**; the 34/34 result does not cover them.
+- The D1 behavior suite covers `/api/v1/me`, owner-only L1 updates, audit-event persistence, slug-history updates, slug conflict non-mutation, invalid-language rejection, registration validation/send-failure/expiry/success/replay, and the two new reset/email-change cases once run. This is owner-reported local test evidence at the exact HEAD above. It does not verify Cloudflare live runtime, SMTP delivery, remote D1 parity, migration application, or production deployment.
 - Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
 - Migration `0002_mod01_business_slug_history.sql` has **not** been applied to remote D1.
 - Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
@@ -56,7 +57,7 @@ These are code and repository changes only. The new migration has **not** been a
 ## 5. Safe next execution order
 
 1. **Completed:** owner ran `npm test` on exact HEAD `3921c4bb8f1a6a484f1c7d1fe1d08e6ab785666f`; all 34 tests passed.
-2. Continue adding safe SQLite-backed behavior coverage for password-reset/session revocation and email-change one-time-token behavior before making those flows production claims.
+2. **Pending owner test run:** run the two new password-reset and email-change behavior tests from commit `ae04531d598309b8d164e7145d62de42e58e4a22`.
 3. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
 4. Expand the dashboard into the full subscription-aware control center only when the authoritative subscription/entitlement rules and corresponding approved segment scenario are ready.
 5. Implement remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion, and retention/purge behavior, without inventing unresolved product rules.
