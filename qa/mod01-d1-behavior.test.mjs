@@ -121,7 +121,9 @@ test("owner language update persists the new L1 and writes an audit event", asyn
   assert.equal(response.status, 200);
   assert.equal(f.db.prepare("SELECT default_language FROM businesses WHERE business_id=?").bind("sbiz-000000001").first().default_language, "vi");
   const event = f.db.prepare("SELECT event_type,old_value,new_value FROM business_events WHERE business_id=?").bind("sbiz-000000001").first();
-  assert.deepEqual(event, { event_type: "primary_language_changed", old_value: "en", new_value: "vi" });
+  assert.equal(event.event_type, "primary_language_changed");
+  assert.equal(event.old_value, "en");
+  assert.equal(event.new_value, "vi");
 });
 
 test("non-owner membership cannot change the business primary language", async t => {
