@@ -119,3 +119,127 @@ test("normal home page remains available without Cloudflare Access configuration
   assert.equal(response.status, 200);
   assert.match(await response.text(), /Create/);
 });
+
+const encoder = new TextEncoder();
+const accessTestTeam = "unit-test.cloudflareaccess.com";
+const accessTestAudience = "unit-test-audience";
+let signingKeysPromise;
+
+function base64url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function encodeJson(value) {
+  return base64url(encoder.encode(JSON.stringify(value)));
+}
+
+async function getSigningKeys() {
+  if (!signingKeysPromise) {
+    signingKeysPromise = (async () => {
+      const pair = await crypto.subtle.generateKey(
+        { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+        true,
+        ["sign", "verify"],
+      );
+      const publicJwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
+      publicJwk.kid = "sbiz-access-test-key";
+      publicJwk.use = "sig";
+      publicJwk.alg = "RS256";
+      return { privateKey: pair.privateKey, publicJwk };
+    })();
+  }
+  return signingKeysPromise;
+}
+
+async function makeAccessToken(claimOverrides = {}, keyOverride = null) {
+  const keys = await getSigningKeys();
+  const header = encodeJson({ alg: "RS256", typ: "JWT", kid: "sbiz-access-test-key" });
+  const claims = encodeJson({
+    iss: "https://" + accessTestTeam,
+    aud: accessTestAudience,
+    exp: Math.floor(Date.now() / 1000) + 300,
+    email: "owner@sbiz.app",
+    ...claimOverrides,
+  });
+  const unsigned = header + "." + claims;
+  const signature = await crypto.subtle.sign(
+    { name: "RSASSA-PKCS1-v1_5" },
+    keyOverride || keys.privateKey,
+    encoder.encode(unsigned),
+  );
+  return unsigned + "." + base64url(new Uint8Array(signature));
+}
+
+async function withMockAccessJwks(run) {
+  const keys = await getSigningKeys();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async input => {
+    assert.equal(String(input), "https://" + accessTestTeam + "/cdn-cgi/access/certs");
+    return new Response(JSON.stringify({ keys: [keys.publicJwk] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  try {
+    return await run();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+function accessTestEnv(audience = accessTestAudience) {
+  return { CF_ACCESS_TEAM_DOMAIN: accessTestTeam, CF_ACCESS_AUD: audience };
+}
+
+test("accepts a correctly signed JWT with matching issuer, audience, expiry and email", async () => {
+  await withMockAccessJwks(async () => {
+    const token = await makeAccessToken();
+    const result = await verifyCloudflareAccess(
+      new Request("https://sbiz.app/admin", { headers: { "cf-access-jwt-assertion": token } }),
+      accessTestEnv(),
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.claims.email, "owner@sbiz.app");
+  });
+});
+
+test("rejects a correctly signed JWT with the wrong audience", async () => {
+  await withMockAccessJwks(async () => {
+    const token = await makeAccessToken();
+    const result = await verifyCloudflareAccess(
+      new Request("https://sbiz.app/admin", { headers: { "cf-access-jwt-assertion": token } }),
+      accessTestEnv("different-audience"),
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 401);
+    assert.equal(result.error, "INVALID_ACCESS_TOKEN");
+  });
+});
+
+test("rejects a correctly signed JWT with the wrong issuer", async () => {
+  await withMockAccessJwks(async () => {
+    const token = await makeAccessToken({ iss: "https://attacker.cloudflareaccess.com" });
+    const result = await verifyCloudflareAccess(
+      new Request("https://sbiz.app/admin", { headers: { "cf-access-jwt-assertion": token } }),
+      accessTestEnv(),
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 401);
+    assert.equal(result.error, "INVALID_ACCESS_TOKEN");
+  });
+});
+
+test("rejects an expired, correctly signed JWT", async () => {
+  await withMockAccessJwks(async () => {
+    const token = await makeAccessToken({ exp: Math.floor(Date.now() / 1000) - 60 });
+    const result = await verifyCloudflareAccess(
+      new Request("https://sbiz.app/admin", { headers: { "cf-access-jwt-assertion": token } }),
+      accessTestEnv(),
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 401);
+    assert.equal(result.error, "INVALID_ACCESS_TOKEN");
+  });
+});
