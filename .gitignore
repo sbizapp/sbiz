@@ -1,3 +1,6 @@
 
 # Local Wrangler state
 .wrangler/
+
+# Node dependencies
+node_modules/
