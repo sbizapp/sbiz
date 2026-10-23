@@ -395,3 +395,12 @@ test("all supported locale prefixes render localized entry and account screens",
   assert.match(dashboardHtml, /<html lang="pt">/);
   assert.match(dashboardHtml, /Seu painel/);
 });
+
+test("localized email-change confirmation page renders without missing-copy errors", async () => {
+  const response = await worker.fetch(new Request("https://sbiz.app/vi/change-email"), {}, { waitUntil() {} });
+  assert.equal(response.status, 200);
+  const body = await response.text();
+  assert.match(body, /Xác nhận đổi email/);
+  assert.match(body, /Thiếu liên kết xác nhận\./);
+  assert.doesNotMatch(body, /translations is not defined/);
+});
