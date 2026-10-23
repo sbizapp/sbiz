@@ -391,7 +391,7 @@ async function adminBusinessList(request, env) {
   const url = new URL(request.url);
   const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") || 50)));
   const result = await env.SBIZ_APP_DB.prepare(
-    "SELECT business_id,current_slug,account_id,default_language,created_at,verified_at,registration_document_url,verification_status,admin_verified_at,status FROM businesses ORDER BY created_at DESC LIMIT ?"
+    "SELECT b.business_id,b.current_slug,a.email,b.account_id,b.default_language,b.created_at,b.verified_at,b.registration_document_url,b.verification_status,b.admin_verified_at,b.status FROM businesses b JOIN accounts a ON a.account_id=b.account_id ORDER BY b.created_at DESC LIMIT ?"
   ).bind(limit).all();
   return json({ businesses: result.results || [] });
 }
@@ -402,7 +402,7 @@ async function adminBusiness(request, env, businessId) {
   if (!await isSystemAdmin(account, env)) return json({ error: "ADMIN_REQUIRED" }, 403);
   const db = env.SBIZ_APP_DB;
   if (request.method === "GET") {
-    const business = await db.prepare("SELECT business_id,current_slug,account_id,default_language,created_at,verified_at,subscription_started_at,subscription_expires_at,data_deleted_at,registration_document_url,verification_status,admin_verified_at,status FROM businesses WHERE business_id=?").bind(businessId).first();
+    const business = await db.prepare("SELECT b.business_id,b.current_slug,a.email,b.account_id,b.default_language,b.created_at,b.verified_at,b.subscription_started_at,b.subscription_expires_at,b.data_deleted_at,b.registration_document_url,b.verification_status,b.admin_verified_at,b.status FROM businesses b JOIN accounts a ON a.account_id=b.account_id WHERE b.business_id=?").bind(businessId).first();
     if (!business) return json({ error: "NOT_FOUND" }, 404);
     const history = await db.prepare("SELECT event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json FROM business_events WHERE business_id=? ORDER BY occurred_at DESC LIMIT 200").bind(businessId).all();
     return json({ business, history: history.results || [] });
