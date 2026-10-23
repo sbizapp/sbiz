@@ -9,7 +9,8 @@
     "db:migrate:local": "wrangler d1 migrations apply sbiz-app-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply sbiz-app-db --remote",
     "test:access": "node --experimental-loader ./qa/node-cloudflare-compat-loader.mjs --test qa/mod01-cloudflare-access.test.mjs",
-    "test:slug-history": "node --test qa/mod01-slug-history-contract.test.mjs"
+    "test:slug-history": "node --test qa/mod01-slug-history-contract.test.mjs",
+    "test": "npm run check && npm run test:slug-history && npm run test:access"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
