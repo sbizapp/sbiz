@@ -3,7 +3,9 @@
 **Status:** Approved working standard  
 **Applies to:** SBiz.app source code and Cloudflare Worker deployment  
 **Repository:** `sbizapp/sbiz`  
-**Purpose:** Keep source code modular, traceable, easy to change, and deployable without manually pasting every file into the Cloudflare Dashboard.
+**Purpose:** Keep source code traceable and easy for the owner to manage and deploy from the Cloudflare Dashboard.
+
+**Current owner-approved mode (2026-10-23):** The canonical deployable application source is the self-contained root `worker.js`. The previous multi-file source layout is superseded for this phase. Do not add imports from repository-local files to `worker.js`; keep SQL migrations, Cloudflare configuration records, QA and product documents separate. All future runtime code changes must be reflected in the complete `worker.js` file.
 
 ## 1. Source of truth and runtime
 
@@ -13,35 +15,19 @@
 - The owner manually controls production deployment. The Builder must not deploy, trigger CI workflows, or change Cloudflare resources on the owner's behalf.
 - Never claim a deployment or runtime result without observable evidence.
 
-## 2. Proposed source layout
-
-Use this as the target structure, adding files when their responsibilities are real. Do not create empty or speculative files merely to fill out the tree.
+## 2. Current source layout
 
 ```text
 sbiz/
-├── worker.js                 # Small Worker entry point
-├── wrangler.jsonc            # Worker and asset/build configuration
-├── package.json              # Project scripts and development dependencies
-├── src/
-│   ├── router.js             # Top-level route dispatch
-│   ├── shared/               # Small, genuinely shared server utilities
-│   └── modules/
-│       ├── register/
-│       ├── login/
-│       ├── customer/
-│       ├── product/
-│       └── quote/
-├── public/                   # Public website assets, when configured
-│   ├── robots.txt
-│   ├── sitemap.xml
-│   ├── favicon.ico
-│   └── assets/
-├── tests/                    # Focused tests where they add value
-└── docs/
-    └── CODE_ORGANIZATION_AND_DEPLOYMENT_STANDARD.md
+├── worker.js                 # Single deployable application source; contains modules, routing, SEO endpoints and Worker entry
+├── wrangler.jsonc            # Non-secret bindings/configuration reference; Dashboard settings must be checked separately
+├── package.json              # Low-cost syntax/test scripts
+├── migrations/               # D1 schema migrations; remain separate from runtime code
+├── qa/                       # Automated checks
+└── docs/                     # Product authority, infrastructure register and deployment handoff
 ```
 
-This is a target layout, not a statement that all listed directories or files already exist. Module names and product behavior must follow the approved product plan and action scenarios.
+Do not split runtime code into repository-local imports unless the owner explicitly changes this decision. SQL migrations, secrets, Cloudflare bindings, and authoritative product documents are not embedded in `worker.js`.
 
 ## 3. Module boundaries and section markers
 
