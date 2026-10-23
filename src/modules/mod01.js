@@ -3,6 +3,7 @@
  * All database writes use the SBIZ_APP_DB D1 binding.
  */
 import { sendMail } from "../shared/smtp-mailer.js";
+import { verifyCloudflareAccess } from "../shared/cloudflare-access.js";
 
 const LANGUAGES = new Set(["en", "vi", "id", "es", "pt"]);
 const RESERVED_SLUGS = new Set([
@@ -82,10 +83,6 @@ async function currentAccount(request, env) {
     WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>? AND a.status='active'`)
     .bind(tokenHash, nowIso()).first();
 }
-async function isSystemAdmin(account, env) {
-  return Boolean(account && account.email_verified_at && env.ADMIN_EMAIL &&
-    normalizeEmail(account.email) === normalizeEmail(env.ADMIN_EMAIL));
-}
 async function createSession(db, accountId) {
   const token = randomToken(32);
   const now = new Date();
@@ -132,6 +129,11 @@ function pageForPath(path, url) {
   if (path === "/reset-password") return html(page("Reset password", `
     <form id="form"><label>New password</label><input name="password" type="password" minlength="12" autocomplete="new-password" required><button>Reset password</button><div id="message" role="status"></div></form>
     <script>const token=new URLSearchParams(location.search).get('token');document.querySelector('#form').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target);const r=await fetch('/api/v1/password/reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,password:f.get('password')})});const d=await r.json();document.querySelector('#message').textContent=d.message||d.error||'Request completed';if(r.ok)setTimeout(()=>location.href='/login',1500);});if(!token)document.querySelector('#message').textContent='Reset link is missing.';</script>`));
+  if (path === "/admin") return html(page("SBiz system administration", `
+    <p>Cloudflare Access authentication succeeded for this request.</p>
+    <p>The protected admin API is available, but the full administration dashboard has not been implemented yet.</p>
+    <a class="secondary" href="/">Return to SBiz</a>
+  `));
   if (path === "/dashboard") return html(page("SBiz dashboard", `<p id="status">Checking session…</p><a class="button" href="/api/v1/logout">Logout</a><script>fetch('/api/v1/me').then(r=>r.json()).then(d=>{document.querySelector('#status').textContent=d.email?'Signed in as '+d.email:'Please login first';if(!d.email)setTimeout(()=>location.href='/login',800)});</script>`));
   return null;
 }
@@ -309,7 +311,8 @@ async function updateBusinessSlug(request, env, businessId) {
   const business = await db.prepare("SELECT * FROM businesses WHERE business_id=?").bind(businessId).first();
   if (!business) return json({ error: "NOT_FOUND" }, 404);
   const membership = await db.prepare("SELECT role FROM business_memberships WHERE business_id=? AND account_id=?").bind(businessId, account.account_id).first();
-  const admin = await isSystemAdmin(account, env);
+  const access = slug.length <= 12 ? await verifyCloudflareAccess(request, env) : null;
+  const admin = Boolean(access?.ok);
   if (!membership && !admin) return json({ error: "FORBIDDEN" }, 403);
   if (slug.length <= 12 && !admin) return json({ error: "ADMIN_REQUIRED_FOR_SHORT_SLUG" }, 403);
   const conflict = await db.prepare("SELECT business_id FROM businesses WHERE current_slug=? COLLATE NOCASE AND business_id<>?").bind(slug, businessId).first();
@@ -331,7 +334,8 @@ async function requestEmailChange(request, env, businessId) {
   if (newEmail === normalizeEmail(account.email)) return json({ error: "EMAIL_UNCHANGED" }, 400);
   const db = env.SBIZ_APP_DB;
   const membership = await db.prepare("SELECT role FROM business_memberships WHERE business_id=? AND account_id=?").bind(businessId, account.account_id).first();
-  if (!membership && !await isSystemAdmin(account, env)) return json({ error: "FORBIDDEN" }, 403);
+  const access = await verifyCloudflareAccess(request, env);
+  if (!membership && !access.ok) return json({ error: "FORBIDDEN" }, 403);
   const existing = await db.prepare("SELECT account_id FROM accounts WHERE email=? COLLATE NOCASE AND account_id<>?").bind(newEmail, account.account_id).first();
   if (existing) return json({ error: "EMAIL_ALREADY_USED", message: "This email is already in use." }, 409);
   const token = randomToken(32);
@@ -386,9 +390,8 @@ async function confirmEmailChange(request, env) {
 }
 
 async function adminBusinessList(request, env) {
-  const account = await currentAccount(request, env);
-  if (!account) return json({ error: "UNAUTHENTICATED" }, 401);
-  if (!await isSystemAdmin(account, env)) return json({ error: "ADMIN_REQUIRED" }, 403);
+  const accessEmail = request.headers.get("x-sbiz-verified-access-email");
+  if (!accessEmail) return json({ error: "CLOUDFLARE_ACCESS_REQUIRED" }, 401);
   const url = new URL(request.url);
   const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") || 50)));
   const result = await env.SBIZ_APP_DB.prepare(
@@ -398,9 +401,8 @@ async function adminBusinessList(request, env) {
 }
 
 async function adminBusiness(request, env, businessId) {
-  const account = await currentAccount(request, env);
-  if (!account) return json({ error: "UNAUTHENTICATED" }, 401);
-  if (!await isSystemAdmin(account, env)) return json({ error: "ADMIN_REQUIRED" }, 403);
+  const accessEmail = request.headers.get("x-sbiz-verified-access-email");
+  if (!accessEmail) return json({ error: "CLOUDFLARE_ACCESS_REQUIRED" }, 401);
   const db = env.SBIZ_APP_DB;
   if (request.method === "GET") {
     const business = await db.prepare("SELECT b.business_id,b.current_slug,a.email,b.account_id,b.default_language,b.created_at,b.verified_at,b.subscription_started_at,b.subscription_expires_at,b.data_deleted_at,b.registration_document_url,b.verification_status,b.admin_verified_at,b.status FROM businesses b JOIN accounts a ON a.account_id=b.account_id WHERE b.business_id=?").bind(businessId).first();
@@ -419,8 +421,8 @@ async function adminBusiness(request, env, businessId) {
     const now = nowIso();
     await db.batch([
       db.prepare("UPDATE businesses SET registration_document_url=?,verification_status='verified',admin_verified_at=? WHERE business_id=?").bind(rawUrl, now, businessId),
-      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'registration_document_link_updated',?,?,?,?)").bind(uuid(), businessId, now, account.account_id, old.registration_document_url, rawUrl),
-      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?,?, 'business_verification_approved',?,?,?,? ,?)").bind(uuid(), businessId, now, account.account_id, old.verification_status, "verified", JSON.stringify({ documentUrl: rawUrl }))
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'registration_document_link_updated',?,?,?,?)").bind(uuid(), businessId, now, null, old.registration_document_url, rawUrl),
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?,?, 'business_verification_approved',?,?,?,? ,?)").bind(uuid(), businessId, now, null, old.verification_status, "verified", JSON.stringify({ documentUrl: rawUrl, accessEmail }))
     ]);
     return json({ ok: true, business_id: businessId, registration_document_url: rawUrl, verification_status: "verified", admin_verified_at: now });
   }
