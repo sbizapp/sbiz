@@ -876,7 +876,8 @@ async function verifyCustomDomainCname(hostname, target) {
 function providerValidationData(result) {
   return {
     ownership: result?.ownership_verification || null,
-    ownership_http: result?.ownership_verification_http || null
+    ownership_http: result?.ownership_verification_http || null,
+    validation_records: Array.isArray(result?.validation_records) ? result.validation_records : []
   };
 }
 async function cloudflareCustomHostname(env, method, hostname, providerId) {
@@ -941,7 +942,13 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
   if (!fallback.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "DNS ownership is verified, but Cloudflare for SaaS API credentials are not configured." }, 503);
   if (!fallback.ok) return json({ error: fallback.errorCode, message: "The Cloudflare for SaaS fallback origin could not be checked." }, 503);
   if (fallback.status !== "active" || !fallback.origin) {
-    await db.prepare("UPDATE business_custom_domains SET status='pending_provider',error_code='FALLBACK_ORIGIN_NOT_ACTIVE',updated_at=? WHERE domain_id=?").bind(nowIso(), domainId).run();
+    const checkedAt = nowIso();
+    const hasProviderHostname = Boolean(refreshed.provider_hostname_id);
+    await db.prepare("UPDATE business_custom_domains SET status=?,routing_verified_at=NULL,error_code='FALLBACK_ORIGIN_NOT_ACTIVE',updated_at=? WHERE domain_id=?")
+      .bind(hasProviderHostname ? "pending_deployment" : "pending_provider", checkedAt, domainId).run();
+    if (hasProviderHostname) {
+      return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: "pending_deployment", provider_status: refreshed.provider_status, ssl_status: refreshed.ssl_status, cname_target: refreshed.cname_target, error: "FALLBACK_ORIGIN_NOT_ACTIVE", message: "The fallback origin is not active; this hostname is not ready for production traffic." }, 202);
+    }
     return json({ error: "FALLBACK_ORIGIN_NOT_ACTIVE", message: "The Cloudflare for SaaS fallback origin must be active before adding custom hostnames." }, 503);
   }
   const cnameTarget = String(env.CLOUDFLARE_SAAS_CNAME_TARGET || fallback.origin).trim().toLowerCase().replace(/\.$/, "");
