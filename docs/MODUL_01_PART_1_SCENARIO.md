@@ -1,6 +1,6 @@
 # SBIZ.APP — MODUL 01, PHẦN 1
 ## Kịch bản nghiệp vụ và quy tắc dữ liệu
-**Phiên bản:** 1.4  
+**Phiên bản:** 1.5  
 **Trạng thái:** Đã được Chủ dự án chấp thuận; có bổ sung trường liên kết giấy đăng ký kinh doanh.  
 **Phạm vi:** Trang chủ, đăng ký, xác minh email, định danh doanh nghiệp, đăng nhập, khôi phục quyền truy cập và lưu dấu vết vòng đời doanh nghiệp.  
 **Lưu ý:** Đây là đặc tả nghiệp vụ/kỹ thuật. Không có nghĩa mã nguồn đã được triển khai hoặc kiểm thử.
@@ -38,6 +38,7 @@ Sau khi biểu mẫu hợp lệ, hệ thống tạo yêu cầu đăng ký tạm 
 
 - Email xác minh có hiệu lực 30 phút, tính từ lúc hệ thống ghi nhận gửi thành công.
 - Token được kiểm tra ở phía máy chủ, chỉ sử dụng một lần.
+- Vì biểu mẫu đăng ký chỉ có ba trường và Login dùng email/mật khẩu, liên kết xác minh mở màn hình để người dùng đặt mật khẩu lần đầu. Mật khẩu không được thêm vào biểu mẫu Create. Hồ sơ chính thức chỉ được tạo sau khi token xác minh hợp lệ và người dùng gửi mật khẩu hợp lệ trong bước này.
 - Hết hạn thì yêu cầu cũ mất hiệu lực và khách phải đăng ký lại từ đầu.
 - Token hết hạn phải bị vô hiệu ngay về mặt nghiệp vụ; dữ liệu tạm được dọn định kỳ.
 - Dữ liệu tạm không được dùng để tạo hoặc giả lập hồ sơ doanh nghiệp chính thức.
