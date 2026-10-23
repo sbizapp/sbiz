@@ -367,3 +367,31 @@ test("localized URL prefix cannot bypass the admin route boundary", async () => 
   assert.equal(response.status, 404);
   assert.doesNotMatch(await response.text(), /Business administration/);
 });
+
+test("all supported locale prefixes render localized entry and account screens", async () => {
+  const cases = [
+    ["/vi", "vi", "Tạo tài khoản doanh nghiệp"],
+    ["/id", "id", "Buat akun bisnis"],
+    ["/es", "es", "Crea una cuenta empresarial"],
+    ["/pt", "pt", "Crie uma conta empresarial"],
+  ];
+  for (const [path, lang, expectedCopy] of cases) {
+    const response = await worker.fetch(new Request("https://sbiz.app" + path), {}, { waitUntil() {} });
+    assert.equal(response.status, 200);
+    const body = await response.text();
+    assert.match(body, new RegExp('<html lang="' + lang + '">'));
+    assert.ok(body.includes(expectedCopy), "Expected localized home copy for " + lang);
+  }
+
+  const forgot = await worker.fetch(new Request("https://sbiz.app/es/forgot-password"), {}, { waitUntil() {} });
+  assert.equal(forgot.status, 200);
+  const forgotHtml = await forgot.text();
+  assert.match(forgotHtml, /<html lang="es">/);
+  assert.match(forgotHtml, /uiLanguage:"es"/);
+
+  const dashboard = await worker.fetch(new Request("https://sbiz.app/pt/dashboard"), {}, { waitUntil() {} });
+  assert.equal(dashboard.status, 200);
+  const dashboardHtml = await dashboard.text();
+  assert.match(dashboardHtml, /<html lang="pt">/);
+  assert.match(dashboardHtml, /Seu painel/);
+});
