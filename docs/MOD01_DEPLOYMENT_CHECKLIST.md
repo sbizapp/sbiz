@@ -16,7 +16,7 @@
 
 ## Required secrets and bindings
 
-The Wrangler config declares the existing D1 binding as `SBIZ_APP_DB`. Verify that the D1 database ID matches the intended Cloudflare account before running migrations.
+The Wrangler config declares D1 binding `SBIZ_APP_DB` and database `sbiz-app-db`. The existing database ID is retained. Do not run remote migrations for this Access/runtime investigation; migration requires separate explicit owner approval.
 
 Set the SMTP password as a Cloudflare Worker secret; never put the value in Git or chat:
 
@@ -29,10 +29,10 @@ The code expects:
 - `SMTP_PORT=465`
 - `SMTP_USER_NOREPLY=no-reply@sbiz.app`
 - Secret `SMTP_PASSWORD_NOREPLY`
-- `CF_ACCESS_TEAM_DOMAIN=<your-team>.cloudflareaccess.com`
-- `CF_ACCESS_AUD=<Access application AUD tag>`
+- `CF_ACCESS_TEAM_DOMAIN=icy-brook-9346.cloudflareaccess.com`
+- `CF_ACCESS_AUD=046996a2416371ba21fbc44bdea84b36d2383213e664de6274d41c19f0172e9c`
 
-These two non-secret Worker vars are required by the Worker to validate Cloudflare Access JWTs. Add their actual values to `wrangler.jsonc` only after creating the Access self-hosted application. The Worker fails closed (503) for protected admin routes until both values are configured.
+These two non-secret Worker vars are required by the Worker to validate Cloudflare Access JWTs and are now recorded in `wrangler.jsonc` using the values confirmed in Cloudflare Zero Trust. Keep the config synchronized if the Access application is recreated. The Worker fails closed (503) for protected admin routes until both values are configured in the deployed runtime.
 
 System administration is authorized by Cloudflare Access, not by a special SBiz account email or password. Configure a Cloudflare Access self-hosted application for `sbiz.app` and restrict it to the owner's approved identity (or an explicitly approved admin group). Protect both `/admin` and `/api/v1/admin/*`. The Worker independently verifies the `Cf-Access-Jwt-Assertion` signature, issuer, audience, expiry, and email claim. Do not rely on an email header supplied by the browser.
 
