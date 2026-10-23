@@ -127,15 +127,15 @@ Use these display labels and flag choices in the language selector:
 
 | UI language | Language code | Flag shown | Market intent |
 |---|---|---|---|
-| English | `en` | 🇬🇧 | English language option |
+| English | `en` | 🇺🇸 | Prioritize the United States market for English |
 | Tiếng Việt | `vi` | 🇻🇳 | Vietnamese language option |
 | Bahasa Indonesia | `id` | 🇮🇩 | Indonesian language option |
 | Español | `es` | 🇲🇽 | Prioritize the Mexican market for Spanish |
 | Português | `pt` | 🇧🇷 | Prioritize the Brazilian market for Portuguese |
 
-For Spanish, display the Mexican flag 🇲🇽 to emphasize the intended focus on Mexico and the wider Latin American market rather than Spain. For Portuguese, display the Brazilian flag 🇧🇷 to emphasize the intended focus on Brazil rather than Portugal.
+For English, display the United States flag 🇺🇸 to emphasize the intended focus on the US market. For Spanish, display the Mexican flag 🇲🇽 to emphasize the intended focus on Mexico and the wider Latin American market rather than Spain. For Portuguese, display the Brazilian flag 🇧🇷 to emphasize the intended focus on Brazil rather than Portugal.
 
-These flags are market-positioning cues in the UI, not a claim that Spanish is exclusive to Mexico or Portuguese is exclusive to Brazil. Keep the language codes `es` and `pt`; do not change them to country codes. Where technically feasible, use a flag icon asset or a reliable emoji presentation that renders consistently across supported devices.
+These flags are market-positioning cues in the UI, not a claim that English is exclusive to the United States, Spanish is exclusive to Mexico, or Portuguese is exclusive to Brazil. Keep the language codes `en`, `es`, and `pt`; do not change them to country codes. Where technically feasible, use a flag icon asset or a reliable emoji presentation that renders consistently across supported devices.
 
 ## 6. Responsive and performance requirements
 
@@ -154,6 +154,6 @@ These flags are market-positioning cues in the UI, not a claim that Spanish is e
 4. Light and dark themes use the exact tokens specified in this document.
 5. Glass opacity, border thickness, highlight thickness, highlight blur, backdrop blur, radii, shadows, and transition timing use the shared numeric values above.
 6. Modules do not invent their own Liquid Glass values.
-7. The language selector uses `es` with the Mexican flag and `pt` with the Brazilian flag, while retaining the correct language codes.
+7. The language selector uses `en` with the United States flag, `es` with the Mexican flag, and `pt` with the Brazilian flag, while retaining the correct language codes.
 8. Tables, controls, and text remain readable on desktop and mobile.
 9. This document alone is not evidence that the image asset has been committed or the feature implemented.
