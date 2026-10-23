@@ -103,7 +103,7 @@ function page(title, content) {
 function pageForPath(path, url) {
   if (path === "/") return html(page("SBiz — Smart Business", `
     <p>Create a business account or sign in to manage your business.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><a class="button" href="/create">Create</a><a class="button" href="/login" style="background:#334155">Login</a></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><a class="button" href="/create">Create</a><a class="button" href="/login">Login</a></div>
     <p style="margin-top:24px">Choose language</p><nav style="display:flex;gap:10px;flex-wrap:wrap"><a href="/?lang=en">English 🇺🇸</a><a href="/?lang=vi">Tiếng Việt 🇻🇳</a><a href="/?lang=id">Bahasa Indonesia 🇮🇩</a><a href="/?lang=es">Español 🇲🇽</a><a href="/?lang=pt">Português 🇧🇷</a></nav>
   `));
   if (path === "/create") return html(page("Create your SBiz account", `
