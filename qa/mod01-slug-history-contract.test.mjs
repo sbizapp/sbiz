@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const worker = await readFile(new URL("../worker.js", import.meta.url), "utf8");
 const migration = await readFile(new URL("../migrations/0002_mod01_business_slug_history.sql", import.meta.url), "utf8");
+const customDomainMigration = await readFile(new URL("../migrations/0003_mod01_custom_domain_lifecycle.sql", import.meta.url), "utf8");
 
 test("MOD01 slug history migration stores immutable business-linked history", () => {
   assert.match(migration, /CREATE TABLE IF NOT EXISTS business_slug_history/);
@@ -66,4 +67,12 @@ test("custom hostname activation requires provider and SSL active states", () =>
   assert.match(worker, /providerStatus === "active" && sslStatus === "active"/);
   assert.match(worker, /CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED/);
   assert.match(worker, /verification_expires_at<=\?/);
+});
+
+test("custom domain schema enforces hostname uniqueness and verified active SSL state", () => {
+  assert.match(customDomainMigration, /CREATE TABLE IF NOT EXISTS business_custom_domains/);
+  assert.match(customDomainMigration, /uq_business_custom_domains_live_hostname/);
+  assert.match(customDomainMigration, /verification_expires_at TEXT NOT NULL/);
+  assert.match(customDomainMigration, /status <> 'active' OR \(verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status IS NOT NULL AND provider_status = 'active' AND ssl_status IS NOT NULL AND ssl_status = 'active'\)/);
+  assert.match(customDomainMigration, /WHERE status <> 'removed'/);
 });
