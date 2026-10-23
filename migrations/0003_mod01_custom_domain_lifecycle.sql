@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS business_custom_domains (
   updated_at TEXT NOT NULL,
   removed_at TEXT,
   FOREIGN KEY (business_id) REFERENCES businesses(business_id),
-  CHECK (status IN ('pending_dns', 'removed') OR verified_at IS NOT NULL),
+  CHECK (status IN ('pending_dns', 'removed') OR verified_at IS NOT NULL OR (status = 'error' AND error_code = 'DNS_CHALLENGE_EXPIRED')),
   CHECK (status <> 'active' OR (verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status = 'active' AND ssl_status = 'active'))
 );
 
