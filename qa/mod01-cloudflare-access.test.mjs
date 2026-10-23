@@ -243,3 +243,32 @@ test("rejects an expired, correctly signed JWT", async () => {
     assert.equal(result.error, "INVALID_ACCESS_TOKEN");
   });
 });
+
+test("Worker admits a valid Access JWT to the protected admin API", async () => {
+  await withMockAccessJwks(async () => {
+    const token = await makeAccessToken();
+    const env = {
+      ...accessTestEnv(),
+      SBIZ_APP_DB: {
+        prepare() {
+          return {
+            bind() {
+              return {
+                async all() { return { results: [] }; },
+              };
+            },
+          };
+        },
+      },
+    };
+    const response = await worker.fetch(
+      new Request("https://sbiz.app/api/v1/admin/businesses", {
+        headers: { "cf-access-jwt-assertion": token },
+      }),
+      env,
+      { waitUntil() {} },
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { businesses: [] });
+  });
+});
