@@ -73,7 +73,7 @@ test("custom domain schema enforces hostname uniqueness and verified active SSL 
   assert.match(customDomainMigration, /CREATE TABLE IF NOT EXISTS business_custom_domains/);
   assert.match(customDomainMigration, /uq_business_custom_domains_live_hostname/);
   assert.match(customDomainMigration, /verification_expires_at TEXT NOT NULL/);
-  assert.match(customDomainMigration, /status <> 'active' OR \(verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status IS NOT NULL AND provider_status = 'active' AND ssl_status IS NOT NULL AND ssl_status = 'active' AND routing_verified_at IS NOT NULL\)/);
+  assert.match(customDomainMigration, /status <> 'active' OR \(verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status IS NOT NULL AND provider_status = 'active' AND ssl_status IS NOT NULL AND ssl_status = 'active' AND cname_target IS NOT NULL AND routing_verified_at IS NOT NULL\)/);
   assert.match(customDomainMigration, /provider_validation_json TEXT/);
   assert.match(customDomainMigration, /ssl_validation_json TEXT/);
   assert.match(customDomainMigration, /routing_verified_at TEXT/);
