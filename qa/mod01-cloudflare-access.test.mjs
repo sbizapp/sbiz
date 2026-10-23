@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { verifyCloudflareAccess } from "../src/shared/cloudflare-access.js";
-import worker from "../worker.js";
+import worker, { verifyCloudflareAccess } from "../worker.js";
 
 test("fails closed when Cloudflare Access configuration is missing", async () => {
   const request = new Request("https://sbiz.app/admin");
