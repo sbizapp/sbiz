@@ -25,7 +25,6 @@
     }
   ],
   "vars": {
-    "ADMIN_EMAIL": "admin@sbiz.app",
     "SMTP_HOST": "smtp.yandex.com",
     "SMTP_PORT": "465",
     "SMTP_USER_NOREPLY": "no-reply@sbiz.app"
