@@ -320,3 +320,24 @@ test("email-change confirmation updates the account, records events for membersh
   assert.equal(f.db.prepare("SELECT email FROM accounts WHERE account_id=?").bind("account-owner").first().email, "new-owner@example.test");
 });
 
+test("business ID capacity exhaustion blocks registration without creating partial records or consuming the pending request", async t => {
+  const f = await emptyFixture();
+  t.after(f.close);
+  f.db.prepare("UPDATE business_id_sequence SET next_value=1000000000 WHERE sequence_name='business'").run();
+  const token = "capacity-registration-token-0123456789";
+  f.db.prepare("INSERT INTO registration_requests (request_id,email,requested_slug,default_language,token_hash,created_at,email_sent_at,expires_at,attempts) VALUES (?,?,?,?,?,?,?,?,0)")
+    .bind("capacity-request", "capacity@example.test", "capacitybusiness123", "en", await hashToken(token), now, now, future).run();
+
+  const response = await worker.fetch(publicJsonRequest("/api/v1/register/verify", {
+    token,
+    password: "LongEnoughPassword123!",
+  }), f.env, { waitUntil() {} });
+
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error, "BUSINESS_ID_CAPACITY_REACHED");
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM accounts").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM businesses").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM registration_requests WHERE request_id=?").bind("capacity-request").first().count, 1);
+  assert.equal(f.db.prepare("SELECT next_value FROM business_id_sequence WHERE sequence_name='business'").first().next_value, 1000000000);
+});
+
