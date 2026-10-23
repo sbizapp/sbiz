@@ -47,13 +47,14 @@ These are code and repository changes only. The new migration has **not** been a
 
 - Source and configuration review: **performed**.
 - Slug-history migration and code hooks: **added; migration/backfill and update SQL shape smoke-tested against a minimal local SQLite schema; not executed against D1**.
-- Automated tests: **not run in this environment**. Do not treat the new contract tests or existing Access tests as PASS until run locally.
+- Owner ran `npm test` at HEAD `5436d2ed8a1a49af46a89081cffc624dfe589a02`: syntax checks passed, slug-history contract tests passed 7/7, and Cloudflare Access tests passed 17/17. This evidence applies only to that HEAD and those two suites.
+- Added `qa/mod01-d1-behavior.test.mjs`, a SQLite-backed Worker behavior suite covering `/api/v1/me`, owner-only L1 updates, audit-event persistence, slug-history updates, slug conflict non-mutation, and invalid-language rejection. Wired into `npm test` on the newer branch HEAD; **this new suite has not yet been run**, so current-head test status is pending owner execution.
 - Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
 - Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
 
 ## 5. Safe next execution order
 
-1. Run `npm install` and `npm test` on this exact branch/HEAD; fix any failures.
+1. On the latest branch HEAD, run `npm install` and `npm test`; this now includes the SQLite-backed D1 behavior suite. Fix any failures before proceeding.
 2. Review and apply migration 0002 to the intended D1 database only after the owner confirms the target and migration state. Do not deploy code that references `business_slug_history` before the table exists.
 3. Add behavioral D1 tests for registration/slug/language changes and race/failure cases.
 4. Expand the dashboard into the full subscription-aware control center after subscription data and entitlement rules are implemented.
