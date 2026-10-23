@@ -300,3 +300,19 @@ test("Admin page follows the minimal white UI standard", async () => {
     assert.doesNotMatch(page, /background[^;]*url\(["']?\/assets\/background-/);
   });
 });
+
+test("all public account pages use the same minimal white typography and surfaces", async () => {
+  for (const path of ["/", "/create", "/login", "/verify", "/change-email", "/forgot-password", "/reset-password"]) {
+    const response = await worker.fetch(
+      new Request("https://sbiz.app" + path),
+      {},
+      { waitUntil() {} },
+    );
+    assert.equal(response.status, 200, path + " should render");
+    const page = await response.text();
+    assert.match(page, /font-family:Roboto,ui-sans-serif,system-ui,sans-serif|font-family:Roboto,Arial,sans-serif/, path + " should use the approved font stack");
+    assert.match(page, /background:#fff/, path + " should use a white surface");
+    assert.match(page, /border:1px solid #e5e7eb/, path + " should use a light-gray border");
+    assert.doesNotMatch(page, /backdrop-filter|linear-gradient|prefers-color-scheme:dark|background[^;]*url\(["']?\/assets\/background-/, path + " should not contain legacy decorative styling");
+  }
+});
