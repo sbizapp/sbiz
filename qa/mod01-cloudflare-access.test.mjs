@@ -293,6 +293,8 @@ test("Admin page exposes the approved Liquid Glass styling in light and dark the
     assert.match(page, /--glass-surface:rgba\(255,255,255,\.75\)/);
     assert.match(page, /backdrop-filter:blur\(var\(--glass-blur\)\) saturate\(140%\)/);
     assert.match(page, /\.panel:before,\.detail:before/);
+    assert.match(page, /\.table-wrap\{background:rgba\(255,255,255,\.12\)\}/);
+    assert.match(page, /tbody tr:hover\{background:rgba\(255,255,255,\.32\)\}/);
     assert.match(page, /@media\(prefers-color-scheme:dark\)/);
     assert.match(page, /@media\(max-width:600px\)/);
     assert.match(page, /prefers-reduced-motion:reduce/);
