@@ -319,6 +319,7 @@ function pageForPath(path, url) {
   const uiLanguage = languageMatch ? languageMatch[1] : "en";
   if (languageMatch) path = languageMatch[2] || "/";
   const localPath = target => localizedPath(uiLanguage, target);
+  if (languageMatch && (path === "/admin" || path.startsWith("/admin/") || path.startsWith("/api/"))) return null;
   const pageLocalized = (title, content) => page(title, content, uiLanguage);
   if (path === "/") return html(pageLocalized("SBiz — Smart Business", `
     <p>Create a business account or sign in to manage your business.</p>
