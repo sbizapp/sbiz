@@ -4,15 +4,20 @@
 
 **Current verification branch:** `cleanup/repository-organization-2026-10-23`  
 **Last owner-tested HEAD:** `a94ea8405756499da30c9c00d1502a542c0ffc6f`  
-**Last owner-run test result:** `npm test` passed all 37 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 13/13. This includes registration/verification, password-reset/session revocation, email-change confirmation/replay, and business-ID capacity exhaustion. The capacity test confirms `503 BUSINESS_ID_CAPACITY_REACHED`, no partial account/business records, retained pending request and unchanged sequence. Node experimental-loader warnings did not fail tests.  
-**Current code after that tested HEAD:** locale-prefixed account flows and translated copy, dashboard email-change action and traceability fields, admin slug-history display, and atomic rollback for password-reset/email-change token consumption have been committed. New regression tests are **pending Owner execution**; the 37/37 result above does not cover these changes.  
-**Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` has not been applied to remote D1. Live runtime/production parity remains unverified.  
-**Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
+**Last owner-run test result:** `npm test` passed all 37 tests at that older HEAD: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 13/13. That evidence remains valid only for the tested commit.
 
+**Current code after that tested HEAD:** locale-prefixed account flows in five languages; dashboard email-change and custom-domain controls; subscription, slug and custom-domain traceability in admin detail; atomic password-reset/email-change token writes; custom-domain DNS TXT ownership, Cloudflare fallback-origin checks, provider ownership/certificate validation records, CNAME routing verification, and scheduled expiry events. The custom-domain code deliberately does not mark a domain active until the fallback origin, provider hostname, SSL, and public CNAME target are verified. New tests are **pending Owner execution**.
+
+**Current expected Node test count:** 29 D1 behavior tests + 12 contract tests + 17 Cloudflare Access tests = **58 tests**, plus `npm run check`. Builder-side source syntax, rendered-page script parsing (20 paths), 12/12 contract assertions via a lightweight harness, and SQLite migration constraint checks passed. These are not a substitute for running `npm test` in the repository's Node/SQLite environment.
+
+**Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` and `migrations/0003_mod01_custom_domain_lifecycle.sql` have **not** been applied to remote D1. Live runtime/production parity remains unverified. The custom-domain CNAME check currently does not support apex-proxying/flattened A/AAAA routing.
+
+**Production deployment is owner-controlled.** Do not run `wrangler deploy` or remote D1 migrations until the owner has reviewed the changes and explicitly approved those actions.
 ## Files added/changed
 
 - `migrations/0001_mod01_account_business_traceability.sql` — D1 tables for accounts, businesses, memberships, pending registration/email-change/reset tokens, sessions, per-cycle subscription history, event history, and rate limiting.
 - `migrations/0002_mod01_business_slug_history.sql` — initial and changed business slug history; **must be applied to the intended D1 database before deploying the Worker version that uses it**.
+- `migrations/0003_mod01_custom_domain_lifecycle.sql` — domain verification/provider/certificate/routing state; **must be applied to the intended D1 database before deploying the Worker version that uses it**.
 - `src/shared/smtp-mailer.js` — SMTP over Workers TCP sockets using implicit TLS on port 465.
 - `src/shared/cloudflare-access.js` — cryptographic Cloudflare Access JWT verification.
 - `src/modules/mod01.js` — minimal Create/Login/verification/password-reset pages and account/business traceability API.
