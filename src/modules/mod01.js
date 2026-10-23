@@ -233,7 +233,7 @@ async function forgotPassword(request, env) {
   const rate = await db.prepare("SELECT window_started_at,request_count FROM email_rate_limits WHERE rate_key=?").bind(rateKey).first();
   if (rate && rate.window_started_at > windowStart && rate.request_count >= 3) return json(neutral);
   if (rate) await db.prepare("UPDATE email_rate_limits SET window_started_at=?,request_count=CASE WHEN window_started_at<=? THEN 1 ELSE request_count+1 END WHERE rate_key=?").bind(now.toISOString(), windowStart, rateKey).run();
-  else await db.prepare("INSERT INTO email_rate_limits (rate_key,window_started_at,request_count) VALUES (?,?,1)").bind(rateKey, now.toISOString(), rateKey).run();
+  else await db.prepare("INSERT INTO email_rate_limits (rate_key,window_started_at,request_count) VALUES (?,?,1)").bind(rateKey, now.toISOString()).run();
   const token = randomToken(32);
   const resetId = uuid();
   const expires = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
