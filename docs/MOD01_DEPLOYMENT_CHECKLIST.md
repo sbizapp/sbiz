@@ -65,7 +65,7 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 - `PATCH /api/v1/businesses/{business_id}/slug` — owner/admin slug update; short slugs (12 characters or fewer) require system admin.
 - `GET /api/v1/admin/businesses?limit=50` — admin-only list of business IDs and verification-document status.
 - `GET /api/v1/admin/businesses/{business_id}` — admin-only traceability record and event history.
-- `PATCH /api/v1/admin/businesses/{business_id}` — admin-only manual entry/update of the HTTPS business-registration document URL, recorded in event history.
+- `PATCH /api/v1/admin/businesses/{business_id}` — admin-only manual entry/update of the HTTPS business-registration document URL; this action marks the business verified and records both document-link and approval events.
 - `GET /health` — existing health check.
 
 ## Important known limits before production
@@ -87,4 +87,4 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 5. Confirm the email arrives, open the link within 30 minutes, set a password, and verify the account/business rows in D1.
 6. Test duplicate email, duplicate slug, invalid slug, expired token, failed SMTP, wrong password, forgot-password neutral response, and one-time reset-token behavior.
 7. Verify admin-only access to the business traceability record and document URL update.
-8. Verify event rows retain business creation, email verification, email changes and admin document-link changes.
+8. Verify event rows retain business creation, email verification, email changes, admin document-link changes and verification approval.
