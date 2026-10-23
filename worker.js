@@ -735,7 +735,7 @@ function handleHealth(request) {
 }
 /* [HEALTH][BACKEND][END] */
 
-const json = (body, status = 404) => new Response(JSON.stringify(body), {
+const routerJson = (body, status = 404) => new Response(JSON.stringify(body), {
   status,
   headers: {
     "content-type": "application/json; charset=utf-8",
