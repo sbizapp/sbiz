@@ -780,9 +780,9 @@ async function listBusinessCustomDomains(request, env, businessId) {
   const access = await requireBusinessOwner(request, env, businessId);
   if (access.response) return access.response;
   const result = await env.SBIZ_APP_DB.prepare(
-    "SELECT domain_id,business_id,hostname,status,verified_at,provider_status,ssl_status,last_provider_check_at,error_code,created_at,updated_at,removed_at FROM business_custom_domains WHERE business_id=? ORDER BY created_at DESC LIMIT 50"
+    "SELECT domain_id,business_id,hostname,status,verified_at,provider_status,ssl_status,provider_validation_json,ssl_validation_json,cname_target,routing_verified_at,last_provider_check_at,error_code,created_at,updated_at,removed_at FROM business_custom_domains WHERE business_id=? ORDER BY created_at DESC LIMIT 50"
   ).bind(businessId).all();
-  return json({ domains: (result.results || []).map(row => ({ ...row, dns_record_name: "_sbiz-verification." + row.hostname })) });
+  return json({ domains: (result.results || []).map(row => ({ ...row, dns_record_name: "_sbiz-verification." + row.hostname, provider_validation: parseJsonValue(row.provider_validation_json), ssl_validation_records: parseJsonValue(row.ssl_validation_json) })) });
 }
 
 async function createBusinessCustomDomain(request, env, businessId) {
@@ -822,10 +822,14 @@ async function createBusinessCustomDomain(request, env, businessId) {
   }, 201);
 }
 
+function parseJsonValue(value) { try { return value ? JSON.parse(value) : null; } catch { return null; } }
+
 function customHostnameState(providerResult) {
   const providerStatus = String(providerResult?.status || "unknown").toLowerCase();
   const sslStatus = String(providerResult?.ssl?.status || "unknown").toLowerCase();
   if (providerStatus === "active" && sslStatus === "active") return "active";
+  if (providerStatus === "pending" || providerStatus === "test_pending") return "pending_validation";
+  if (["active_redeploying", "pending_provisioned", "provisioned"].includes(providerStatus)) return "pending_deployment";
   if (["pending_validation", "pending_issuance", "pending_deployment"].includes(providerStatus)) return providerStatus;
   if (["pending_validation", "pending_issuance", "pending_deployment"].includes(sslStatus)) {
     if (sslStatus === "pending_validation") return "pending_validation";
@@ -835,6 +839,46 @@ function customHostnameState(providerResult) {
   return "error";
 }
 
+
+async function cloudflareFallbackOrigin(env) {
+  const token = env.CLOUDFLARE_API_TOKEN;
+  const zoneId = env.CLOUDFLARE_ZONE_ID;
+  if (!token || !zoneId) return { configured: false };
+  const endpoint = "https://api.cloudflare.com/client/v4/zones/" + encodeURIComponent(zoneId) + "/custom_hostnames/fallback_origin";
+  let response;
+  try {
+    response = await fetch(endpoint, { method: "GET", headers: { authorization: "Bearer " + token, accept: "application/json" } });
+  } catch {
+    return { configured: true, ok: false, errorCode: "CLOUDFLARE_FALLBACK_LOOKUP_UNAVAILABLE" };
+  }
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.success || !payload.result) return { configured: true, ok: false, errorCode: "CLOUDFLARE_FALLBACK_NOT_CONFIGURED" };
+  return { configured: true, ok: true, origin: payload.result.origin || null, status: String(payload.result.status || "unknown").toLowerCase() };
+}
+
+async function verifyCustomDomainCname(hostname, target) {
+  let response;
+  try {
+    response = await fetch("https://cloudflare-dns.com/dns-query?name=" + encodeURIComponent(hostname) + "&type=CNAME", {
+      headers: { accept: "application/dns-json" },
+      cf: { cacheTtl: 0, cacheEverything: false }
+    });
+  } catch {
+    return { ok: false, matches: false };
+  }
+  if (!response.ok) return { ok: false, matches: false };
+  const dns = await response.json().catch(() => null);
+  const answers = Array.isArray(dns?.Answer) ? dns.Answer.filter(answer => Number(answer.type) === 5) : [];
+  const normalize = value => String(value || "").trim().toLowerCase().replace(/^"|"$/g, "").replace(/\.$/, "");
+  return { ok: true, matches: answers.some(answer => normalize(answer.data) === normalize(target)) };
+}
+
+function providerValidationData(result) {
+  return {
+    ownership: result?.ownership_verification || null,
+    ownership_http: result?.ownership_verification_http || null
+  };
+}
 async function cloudflareCustomHostname(env, method, hostname, providerId) {
   const token = env.CLOUDFLARE_API_TOKEN;
   const zoneId = env.CLOUDFLARE_ZONE_ID;
@@ -842,7 +886,7 @@ async function cloudflareCustomHostname(env, method, hostname, providerId) {
   const base = "https://api.cloudflare.com/client/v4/zones/" + encodeURIComponent(zoneId) + "/custom_hostnames";
   const endpoint = providerId ? base + "/" + encodeURIComponent(providerId) : base;
   const init = { method, headers: { authorization: "Bearer " + token, "content-type": "application/json", accept: "application/json" } };
-  if (method === "POST") init.body = JSON.stringify({ hostname, ssl: { method: "http", type: "dv" } });
+  if (method === "POST") init.body = JSON.stringify({ hostname, ssl: { method: "txt", type: "dv" } });
   let response;
   try { response = await fetch(endpoint, init); }
   catch { return { configured: true, ok: false, errorCode: "CLOUDFLARE_API_UNREACHABLE" }; }
@@ -893,9 +937,17 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
 
   const refreshed = await db.prepare("SELECT * FROM business_custom_domains WHERE domain_id=? AND business_id=?").bind(domainId, businessId).first();
   if (!refreshed?.verified_at) return json({ error: "DNS_CHALLENGE_EXPIRED", message: "The DNS challenge expired before verification could be saved. Create a new request." }, 410);
+  const fallback = await cloudflareFallbackOrigin(env);
+  if (!fallback.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "DNS ownership is verified, but Cloudflare for SaaS API credentials are not configured." }, 503);
+  if (!fallback.ok) return json({ error: fallback.errorCode, message: "The Cloudflare for SaaS fallback origin could not be checked." }, 503);
+  if (fallback.status !== "active" || !fallback.origin) {
+    await db.prepare("UPDATE business_custom_domains SET status='pending_provider',error_code='FALLBACK_ORIGIN_NOT_ACTIVE',updated_at=? WHERE domain_id=?").bind(nowIso(), domainId).run();
+    return json({ error: "FALLBACK_ORIGIN_NOT_ACTIVE", message: "The Cloudflare for SaaS fallback origin must be active before adding custom hostnames." }, 503);
+  }
+  const cnameTarget = String(env.CLOUDFLARE_SAAS_CNAME_TARGET || fallback.origin).trim().toLowerCase().replace(/\.$/, "");
   if (!refreshed.provider_hostname_id) {
     const provision = await cloudflareCustomHostname(env, "POST", refreshed.hostname, null);
-    if (!provision.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "DNS ownership is verified, but Cloudflare for SaaS API credentials are not configured." }, 503);
+    if (!provision.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "Cloudflare for SaaS API credentials are not configured." }, 503);
     if (!provision.ok) {
       await db.prepare("UPDATE business_custom_domains SET status='error',error_code=?,updated_at=? WHERE domain_id=?")
         .bind(provision.errorCode, nowIso(), domainId).run();
@@ -903,33 +955,57 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
     }
     const result = provision.result;
     if (!result?.id) return json({ error: "CLOUDFLARE_INVALID_RESPONSE", message: "Cloudflare did not return a hostname identifier; the hostname was not marked active." }, 503);
-    const state = customHostnameState(result);
+    let state = customHostnameState(result);
     const checkedAt = nowIso();
+    let routingVerifiedAt = null;
+    let errorCode = state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null;
+    if (state === "active") {
+      const routing = await verifyCustomDomainCname(refreshed.hostname, cnameTarget);
+      if (routing.ok && routing.matches) routingVerifiedAt = checkedAt;
+      else {
+        state = "pending_deployment";
+        errorCode = routing.ok ? "DNS_CNAME_TARGET_MISMATCH" : "DNS_ROUTING_CHECK_UNAVAILABLE";
+      }
+    }
+    const validation = providerValidationData(result);
+    const sslValidation = Array.isArray(result.ssl?.validation_records) ? result.ssl.validation_records : [];
     await db.batch([
-      db.prepare("UPDATE business_custom_domains SET provider_hostname_id=?,provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
-        .bind(result.id, result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId),
+      db.prepare("UPDATE business_custom_domains SET provider_hostname_id=?,provider_status=?,ssl_status=?,provider_validation_json=?,ssl_validation_json=?,cname_target=?,routing_verified_at=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
+        .bind(result.id, result.status || null, result.ssl?.status || null, JSON.stringify(validation), JSON.stringify(sslValidation), cnameTarget, routingVerifiedAt, state, checkedAt, errorCode, checkedAt, domainId),
       db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) SELECT ?, ?, ?, ?, ?, NULL, ?, ? WHERE EXISTS (SELECT 1 FROM business_custom_domains WHERE domain_id=? AND provider_hostname_id=? AND status=?)")
-        .bind(uuid(), businessId, state === "active" ? "custom_domain_activated" : "custom_domain_provider_created", checkedAt, access.account.account_id, refreshed.hostname, JSON.stringify({ domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null }), domainId, result.id, state)
+        .bind(uuid(), businessId, state === "active" ? "custom_domain_activated" : "custom_domain_provider_created", checkedAt, access.account.account_id, refreshed.hostname, JSON.stringify({ domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null, cnameTarget, routingVerifiedAt }), domainId, result.id, state)
     ]);
-    return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null }, state === "active" ? 200 : 202);
+    return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null, provider_validation: validation, ssl_validation_records: sslValidation, cname_target: cnameTarget, routing_verified_at: routingVerifiedAt }, state === "active" ? 200 : 202);
   }
 
   const check = await cloudflareCustomHostname(env, "GET", refreshed.hostname, refreshed.provider_hostname_id);
   if (!check.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "Cloudflare for SaaS API credentials are not configured." }, 503);
   if (!check.ok) return json({ error: check.errorCode, message: "Cloudflare for SaaS status could not be checked. Retry later." }, 503);
   const result = check.result;
-  const state = customHostnameState(result);
+  let state = customHostnameState(result);
   const checkedAt = nowIso();
+  let routingVerifiedAt = null;
+  let errorCode = state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null;
+  if (state === "active") {
+    const routing = await verifyCustomDomainCname(refreshed.hostname, cnameTarget);
+    if (routing.ok && routing.matches) routingVerifiedAt = checkedAt;
+    else {
+      state = "pending_deployment";
+      errorCode = routing.ok ? "DNS_CNAME_TARGET_MISMATCH" : "DNS_ROUTING_CHECK_UNAVAILABLE";
+    }
+  }
+  const validation = providerValidationData(result);
+  const sslValidation = Array.isArray(result.ssl?.validation_records) ? result.ssl.validation_records : [];
   const refreshStatements = [
-    db.prepare("UPDATE business_custom_domains SET provider_status=?,ssl_status=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
-      .bind(result.status || null, result.ssl?.status || null, state, checkedAt, state === "error" ? "CLOUDFLARE_HOSTNAME_NOT_ACTIVE" : null, checkedAt, domainId)
+    db.prepare("UPDATE business_custom_domains SET provider_status=?,ssl_status=?,provider_validation_json=?,ssl_validation_json=?,cname_target=?,routing_verified_at=?,status=?,last_provider_check_at=?,error_code=?,updated_at=? WHERE domain_id=?")
+      .bind(result.status || null, result.ssl?.status || null, JSON.stringify(validation), JSON.stringify(sslValidation), cnameTarget, routingVerifiedAt, state, checkedAt, errorCode, checkedAt, domainId)
   ];
   if (state === "active" && refreshed.status !== "active") {
     refreshStatements.push(db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?, ?, 'custom_domain_activated', ?, ?, ?, ?, ?)")
-      .bind(uuid(), businessId, checkedAt, access.account.account_id, refreshed.status, refreshed.hostname, JSON.stringify({ domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null })));
+      .bind(uuid(), businessId, checkedAt, access.account.account_id, refreshed.status, refreshed.hostname, JSON.stringify({ domainId, providerStatus: result.status || null, sslStatus: result.ssl?.status || null, cnameTarget, routingVerifiedAt })));
   }
   await db.batch(refreshStatements);
-  return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null }, state === "active" ? 200 : 202);
+  return json({ ok: true, domain_id: domainId, hostname: refreshed.hostname, status: state, provider_status: result.status || null, ssl_status: result.ssl?.status || null, provider_validation: validation, ssl_validation_records: sslValidation, cname_target: cnameTarget, routing_verified_at: routingVerifiedAt }, state === "active" ? 200 : 202);
 }
 
 async function removeBusinessCustomDomain(request, env, businessId, domainId) {
