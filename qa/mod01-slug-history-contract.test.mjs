@@ -34,3 +34,14 @@ test("admin detail panel stays hidden until opened", () => {
   assert.match(worker, /\.detail:not\(\.open\)\{display:none\}/);
   assert.match(worker, /value="unverified">Unverified/);
 });
+
+test("only a business owner can change the primary language through the MOD01 route", () => {
+  assert.match(worker, /async function updateBusinessLanguage\(request, env, businessId\)/);
+  assert.match(worker, /membership\.role !== "owner"/);
+  assert.match(worker, /primary_language_changed/);
+  assert.match(worker, /\/api\/v1\/businesses\\\/(sbiz-\\d\{9\})\\\/language/);
+});
+test("dashboard exposes the five supported primary-language choices", () => {
+  for (const code of ["en", "vi", "id", "es", "pt"]) assert.match(worker, new RegExp('\\["' + code + '"'));
+  assert.match(worker, /Save language/);
+});
