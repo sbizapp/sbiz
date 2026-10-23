@@ -69,6 +69,21 @@ CREATE TABLE IF NOT EXISTS registration_requests (
 CREATE INDEX IF NOT EXISTS idx_registration_email ON registration_requests(email);
 CREATE INDEX IF NOT EXISTS idx_registration_expiry ON registration_requests(expires_at);
 
+CREATE TABLE IF NOT EXISTS email_change_requests (
+  change_id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  business_id TEXT NOT NULL,
+  new_email TEXT NOT NULL COLLATE NOCASE,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  FOREIGN KEY (account_id) REFERENCES accounts(account_id),
+  FOREIGN KEY (business_id) REFERENCES businesses(business_id)
+);
+CREATE INDEX IF NOT EXISTS idx_email_change_expiry ON email_change_requests(expires_at);
+CREATE INDEX IF NOT EXISTS idx_email_change_account ON email_change_requests(account_id);
+
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   reset_id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL,
