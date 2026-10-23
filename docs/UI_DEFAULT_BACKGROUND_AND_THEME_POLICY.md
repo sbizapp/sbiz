@@ -1,161 +1,58 @@
-# sbiz.app — Default Background, Themes, and Liquid Glass Design Tokens
+# sbiz.app — Minimal White UI Design Standard
 
-**Status:** Owner-approved paired backgrounds; implementation in progress. The approved pair is the supplied blue-cloud background for Light Mode and the dark cyan/blue/magenta wave background for Dark Mode.
-**Scope:** Visual design system and appearance preferences. This document does not authorize frontend implementation or deployment.
+**Status:** Owner-approved design direction, 2026-10-23.
+**Authority:** This document supersedes the previous Liquid Glass, background-image, and theme styling rules for the UI.
 
-## 1. Default background
+## 1. Core rule
 
-Use the two images supplied and approved by the Owner on 2026-10-23 as the default paired backgrounds:
+Every visible UI object uses a plain white background `#ffffff`, a thin light-gray border, and only a subtle, light shadow.
 
-- **Light Mode:** `background-light.jpg` — blue sky and clouds with flowing blue curves and light particles.
-- **Dark Mode:** `background-dark.jpg` — black background with flowing cyan/blue/magenta glass waves.
-- These two supplied images replace the previously proposed pastel mountain-and-sky direction. Do not substitute unrelated images or describe these files as the earlier generated concept.
-- Preserve the supplied originals. Optimized JPEG copies may be used for delivery without changing the approved composition.
-- Runtime R2 keys: `assets/background-light.jpg` and `assets/background-dark.jpg` in the `SBIZ_APP_R2` bucket, served at `/assets/background-light.jpg` and `/assets/background-dark.jpg`.
-- The current implementation follows the operating system color preference (`prefers-color-scheme`) to select Light or Dark Mode. A user-facing manual theme toggle is not part of this implementation unless separately approved.
+- Surface background: `#ffffff` for every component, including page-level surfaces, panels, cards, forms, inputs, tables, navigation, dialogs, dropdowns, and buttons.
+- Border: 1 px solid light gray, baseline `#e5e7eb`.
+- Shadow: optional and restrained, baseline `0 1px 2px rgba(0,0,0,0.05)`; do not stack shadows.
+- Main text: `#111827`.
+- Secondary text: `#6b7280`.
+- Dividers: `#e5e7eb`.
+- Corner radius: restrained and consistent; default 6 px for controls and 8 px for panels.
+- Page background: `#ffffff`.
 
-### Background rendering rules
+## 2. Explicitly prohibited
 
-- `background-size: cover`
-- `background-position: center center` as the default; allow responsive focal-position adjustments only when needed to keep the image composition usable.
-- `background-repeat: no-repeat`
-- `background-attachment: fixed` must not be required; use normal scrolling behavior for reliable mobile performance.
-- Place content on glass surfaces; do not put long body text or data tables directly on the image.
-- Use an adaptive neutral overlay behind content only if contrast testing shows it is necessary. Overlay must not replace or permanently alter the stored original image.
+Do not use:
+- Background images, decorative page backgrounds, texture, or patterned surfaces.
+- Transparency, frosted glass, `backdrop-filter`, blur, or saturation effects.
+- Gradients, specular highlights, glow, neon, decorative particles, or ornamental effects.
+- Dark-mode alternate surfaces or color-scheme-driven component colors.
+- Heavy shadows, multi-layer shadows, or large floating-card effects.
+- Module-specific styling that conflicts with this standard.
 
-## 2. Numeric Liquid Glass design tokens
+Do not delete or modify the original image assets in storage as part of this UI change; simply stop rendering them as interface backgrounds.
 
-These are the sbiz.app baseline values. Implementations must use shared design tokens rather than inventing module-specific values. Values below are proposed design-system constants for sbiz.app, not claims about Apple's proprietary implementation.
+## 3. Component rules
 
-### 2.1 Shared geometry and effects
+- All objects have a white background and a thin light-gray border. This includes buttons and form controls; distinguish action priority with text weight and restrained border treatment, not filled color backgrounds.
+- Primary actions may use stronger font weight, but their surface remains white.
+- Inputs and selects must remain clearly bounded and have visible keyboard focus indicators.
+- Tables use white cells, light-gray separators, and a white header. Hover states may change text or border subtly but must not introduce colored or translucent fills.
+- Status labels remain white with a light-gray border; status meaning may be expressed in text.
+- Avoid unnecessary containers. Use spacing and alignment to establish hierarchy.
+- Preserve existing product behavior, routes, APIs, authorization, data, and business rules.
+- Preserve responsive layouts. On mobile, adapt tables appropriately rather than shrinking the entire desktop interface.
 
-| Token | Fixed baseline |
-|---|---|
-| Glass surface opacity | 75% |
-| Glass surface transparency | 25% |
-| Standard border thickness | 1 px |
-| Specular edge highlight thickness | 2 px |
-| Inner top highlight thickness | 1 px |
-| Outer highlight blur radius | 6 px |
-| Outer highlight spread | 0 px |
-| Desktop backdrop blur | 16 px |
-| Mobile backdrop blur | 12 px |
-| Backdrop saturation | 140% |
-| Standard panel corner radius | 16 px |
-| Compact control corner radius | 10 px |
-| Large dashboard/card corner radius | 20 px |
-| Standard panel shadow | 0 8px 24px |
-| Shadow spread | 0 px |
-| Default transition duration | 180 ms |
-| Default transition easing | cubic-bezier(0.2, 0.7, 0.2, 1) |
+## 4. Implementation guidance
 
-Do not add neon glow, large colored halos, strong bloom, or heavy multi-layer shadows. The edge highlight must read as a restrained reflection along the panel edge, not a luminous outline around the entire component.
+Use shared CSS tokens wherever practical:
+```css
+:root {
+  --ui-surface: #ffffff;
+  --ui-border: #e5e7eb;
+  --ui-text: #111827;
+  --ui-muted: #6b7280;
+  --ui-divider: #e5e7eb;
+  --ui-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ui-radius-control: 6px;
+  --ui-radius-panel: 8px;
+}
+```
 
-### 2.2 Light theme color tokens
-
-| Token | Fixed value | Use |
-|---|---|---|
-| Page base fallback | `#E9EDF3` | Fallback below the background image |
-| Main text | `#182230` | Primary text |
-| Secondary text | `#526174` | Supporting text |
-| Glass surface | `rgba(255,255,255,0.75)` | Standard glass panels |
-| Glass surface elevated | `rgba(255,255,255,0.84)` | Dialogs and important overlays |
-| Glass border | `rgba(255,255,255,0.78)` | 1 px panel border |
-| Inner top specular highlight | `rgba(255,255,255,0.95)` | 1 px inner top edge |
-| Edge highlight | `rgba(255,255,255,0.72)` | 2 px restrained reflective edge |
-| Edge highlight blur color | `rgba(180,205,235,0.18)` | 6 px soft edge reflection |
-| Panel shadow | `rgba(31,45,66,0.12)` | 0 8px 24px shadow |
-| Primary accent | `#1677F2` | Primary action and active states |
-| Divider | `rgba(24,34,48,0.10)` | Separators |
-
-### 2.3 Dark theme color tokens
-
-| Token | Fixed value | Use |
-|---|---|---|
-| Page base fallback | `#0B1018` | Fallback below the background image |
-| Main text | `#F3F6FA` | Primary text |
-| Secondary text | `#B4C0D0` | Supporting text |
-| Glass surface | `rgba(15,23,35,0.75)` | Standard glass panels |
-| Glass surface elevated | `rgba(22,32,47,0.88)` | Dialogs and important overlays |
-| Glass border | `rgba(210,225,245,0.20)` | 1 px panel border |
-| Inner top specular highlight | `rgba(255,255,255,0.24)` | 1 px inner top edge |
-| Edge highlight | `rgba(190,215,245,0.30)` | 2 px restrained reflective edge |
-| Edge highlight blur color | `rgba(90,145,215,0.16)` | 6 px soft edge reflection |
-| Panel shadow | `rgba(0,0,0,0.32)` | 0 8px 24px shadow |
-| Primary accent | `#3B91FF` | Primary action and active states |
-| Divider | `rgba(230,238,250,0.12)` | Separators |
-
-### 2.4 Border and specular construction
-
-- Every standard glass panel has a 1 px border using the theme's `Glass border` token.
-- Add a 1 px inner top highlight using the theme's `Inner top specular highlight` token.
-- Use a maximum 2 px reflective edge treatment using the theme's `Edge highlight` token.
-- The reflective edge may use a linear gradient so its strongest reflection is on the top and upper side edges; the bottom edge must remain restrained.
-- The 6 px highlight blur uses the theme's `Edge highlight blur color` token. Do not increase blur or opacity per component.
-- Do not add a separate outer glow unless a later approved design revision explicitly changes this standard.
-
-### 2.5 Blur and readability
-
-- Desktop glass surfaces: `backdrop-filter: blur(16px) saturate(140%)`.
-- Mobile glass surfaces: `backdrop-filter: blur(12px) saturate(140%)`.
-- If backdrop filtering is unsupported or too expensive, use the theme's opaque/elevated fallback surface.
-- Tables, form controls, dialogs, navigation, and text-heavy content must remain readable. Increase surface opacity only through the defined elevated token or a future centrally approved token, not with local arbitrary values.
-- The 75% surface opacity is the standard target; do not interpret it as a requirement to make all controls equally transparent.
-
-## 3. User background customization
-
-Provide a setting under Appearance / UI Settings to choose another background and a clear **Restore default background** action.
-
-- The original default asset must remain available independently of the user's selection.
-- Persist each user's chosen background preference so it remains selected on later visits.
-- Changing the background must not change layout, functionality, data, permissions, L1/L2 settings, or business identity.
-- If a custom background is removed or unavailable, fall back to the original default.
-- Restoring the default means selecting the original first landscape image, not the plain neutral-background concept.
-
-## 4. Themes
-
-Provide two themes:
-
-- **Light:** use the light color tokens above.
-- **Dark:** use the dark color tokens above.
-
-Theme selection and background selection are independent settings. Both themes must support the original default landscape background. Theme switching changes the component color tokens, not the user's selected background.
-
-## 5. Language choices and market flags
-
-The UI offers five languages: English, Vietnamese, Indonesian, Spanish, and Portuguese. Language identity and market targeting must be represented separately.
-
-Use these display labels and flag choices in the language selector:
-
-| UI language | Language code | Flag shown | Market intent |
-|---|---|---|---|
-| English | `en` | 🇺🇸 | Prioritize the United States market for English |
-| Tiếng Việt | `vi` | 🇻🇳 | Vietnamese language option |
-| Bahasa Indonesia | `id` | 🇮🇩 | Indonesian language option |
-| Español | `es` | 🇲🇽 | Prioritize the Mexican market for Spanish |
-| Português | `pt` | 🇧🇷 | Prioritize the Brazilian market for Portuguese |
-
-For English, display the United States flag 🇺🇸 to emphasize the intended focus on the US market. For Spanish, display the Mexican flag 🇲🇽 to emphasize the intended focus on Mexico and the wider Latin American market rather than Spain. For Portuguese, display the Brazilian flag 🇧🇷 to emphasize the intended focus on Brazil rather than Portugal.
-
-These flags are market-positioning cues in the UI, not a claim that English is exclusive to the United States, Spanish is exclusive to Mexico, or Portuguese is exclusive to Brazil. Keep the language codes `en`, `es`, and `pt`; do not change them to country codes. Where technically feasible, use a flag icon asset or a reliable emoji presentation that renders consistently across supported devices.
-
-## 6. Responsive and performance requirements
-
-- Preserve the AppSheet-inspired principle of well-proportioned tables and controls on desktop, with carefully adapted layouts on mobile.
-- Do not shrink desktop tables proportionally onto mobile. Use responsive column priorities, horizontal scrolling only where appropriate, or mobile card/list layouts according to the table's purpose.
-- Keep the background decorative; data and actions must remain visually dominant.
-- Use optimized image formats and responsive image dimensions.
-- Avoid heavy animation, continuous blur animation, and expensive visual effects.
-- Keep the image itself unmodified as the restorable default asset; any overlays are rendering layers, not edits to the original file.
-
-## 7. Acceptance criteria
-
-1. The Owner-approved pair is used: `background-light.jpg` for Light Mode and `background-dark.jpg` for Dark Mode.
-2. Both image assets are uploaded to the configured R2 bucket at the exact keys documented above and served successfully by the Worker.
-3. Light/Dark selection follows the system preference; a manual theme toggle is not implied by this implementation.
-4. Light and dark surfaces use the applicable color tokens specified in this document.
-5. Glass opacity, border thickness, highlight thickness, highlight blur, backdrop blur, radii, shadows, and transition timing use the shared numeric values above wherever implemented.
-6. Modules do not invent their own Liquid Glass values.
-7. The language selector uses `en` with the United States flag, `es` with the Mexican flag, and `pt` with the Brazilian flag, while retaining the correct language codes.
-8. Tables, controls, and text remain readable on desktop and mobile.
-9. A code commit alone is not evidence that the R2 objects exist or that the live feature has been verified.
+A change is not complete merely because this policy or a stylesheet has been committed. Verify all UI modules and shared components for prohibited legacy effects, run the relevant checks, and inspect the rendered result on desktop and mobile. Do not deploy production without Owner authorization.
