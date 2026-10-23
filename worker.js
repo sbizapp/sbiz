@@ -739,7 +739,7 @@ async function adminBusiness(request, env, businessId) {
     const now = nowIso();
     await db.batch([
       db.prepare("UPDATE businesses SET registration_document_url=?,verification_status='verified',admin_verified_at=? WHERE business_id=?").bind(rawUrl, now, businessId),
-      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'registration_document_link_updated',?,?,?,?)").bind(uuid(), businessId, now, null, old.registration_document_url, rawUrl),
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?,?, 'registration_document_link_updated',?,?,?,?,?)").bind(uuid(), businessId, now, null, old.registration_document_url, rawUrl, JSON.stringify({ actorEmail: accessEmail })),
       db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?,?, 'business_verification_approved',?,?,?,? ,?)").bind(uuid(), businessId, now, null, old.verification_status, "verified", JSON.stringify({ documentUrl: rawUrl, accessEmail }))
     ]);
     return json({ ok: true, business_id: businessId, registration_document_url: rawUrl, verification_status: "verified", admin_verified_at: now });
