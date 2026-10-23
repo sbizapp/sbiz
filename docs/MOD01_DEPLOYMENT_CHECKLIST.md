@@ -6,7 +6,7 @@
 
 ## Files added/changed
 
-- `migrations/0001_mod01_account_business_traceability.sql` — D1 tables for accounts, businesses, memberships, pending registration, reset tokens, sessions, event history, and rate limiting.
+- `migrations/0001_mod01_account_business_traceability.sql` — D1 tables for accounts, businesses, memberships, pending registration/email-change/reset tokens, sessions, per-cycle subscription history, event history, and rate limiting.
 - `src/shared/smtp-mailer.js` — SMTP over Workers TCP sockets using implicit TLS on port 465.
 - `src/modules/mod01.js` — minimal Create/Login/verification/password-reset pages and account/business traceability API.
 - `src/router.js` — route integration.
