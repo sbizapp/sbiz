@@ -309,6 +309,18 @@ async function updateBusinessSlug(request, env, businessId) {
   return json({ ok: true, business_id: businessId, slug });
 }
 
+async function adminBusinessList(request, env) {
+  const account = await currentAccount(request, env);
+  if (!account) return json({ error: "UNAUTHENTICATED" }, 401);
+  if (!await isSystemAdmin(account, env)) return json({ error: "ADMIN_REQUIRED" }, 403);
+  const url = new URL(request.url);
+  const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") || 50)));
+  const result = await env.SBIZ_APP_DB.prepare(
+    "SELECT business_id,current_slug,account_id,default_language,created_at,verified_at,registration_document_url,admin_verified_at,status FROM businesses ORDER BY created_at DESC LIMIT ?"
+  ).bind(limit).all();
+  return json({ businesses: result.results || [] });
+}
+
 async function adminBusiness(request, env, businessId) {
   const account = await currentAccount(request, env);
   if (!account) return json({ error: "UNAUTHENTICATED" }, 401);
@@ -352,6 +364,7 @@ export async function routeMod01(request, env) {
   if (path === "/api/v1/me" && request.method === "GET") return me(request, env);
   const slugMatch = path.match(/^\/api\/v1\/businesses\/(sbiz-\d{9})\/slug$/);
   if (slugMatch && request.method === "PATCH") return updateBusinessSlug(request, env, slugMatch[1]);
+  if (path === "/api/v1/admin/businesses" && request.method === "GET") return adminBusinessList(request, env);
   const adminMatch = path.match(/^\/api\/v1\/admin\/businesses\/(sbiz-\d{9})$/);
   if (adminMatch && ["GET", "PATCH"].includes(request.method)) return adminBusiness(request, env, adminMatch[1]);
   if (path.startsWith("/api/v1/")) return json({ error: "NOT_FOUND" }, 404);
