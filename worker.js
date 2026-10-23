@@ -413,6 +413,7 @@ function domainInstructionLines(domain){
 function showDomainInstructions(result){
   const lines=domainInstructionLines(result);
   if(result.dns)lines.unshift("TXT: "+result.dns.name+" = "+result.dns.value);
+  if(result.verification_expires_at)lines.push("Challenge expires: "+result.verification_expires_at);
   $("domain-dns").textContent=lines.join("\\n");
   $("domain-dns").hidden=lines.length===0;
 }
