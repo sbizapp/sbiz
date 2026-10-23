@@ -116,6 +116,7 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 ## Slug-history change (2026-10-23)
 
 - New contract test: `qa/mod01-slug-history-contract.test.mjs`.
-- Run `npm run check`, `npm run test:slug-history`, and `npm run test:access` on the exact branch HEAD before accepting the change.
+- `GET /dashboard` now renders a responsive account/business overview from `/api/v1/me`; it is not yet the full subscription-aware product control center.
+- Run `npm test` on the exact branch HEAD before accepting the change.
 - The owner must review and apply `migrations/0002_mod01_business_slug_history.sql` to the intended D1 database before deploying the updated Worker. Do not apply remote migrations without owner approval.
 - Slug history is recorded; public old-slug redirects remain a separate gap until the public business-page resolver exists.
