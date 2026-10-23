@@ -5,6 +5,7 @@
 **Current verification branch:** `cleanup/repository-organization-2026-10-23`  
 **Last owner-tested HEAD:** `3921c4bb8f1a6a484f1c7d1fe1d08e6ab785666f`  
 **Last owner-run test result:** `npm test` passed all 34 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 10/10. This includes the four registration/verification behavior tests from commit `e91bb4e6003138c01b8b933d178c1e1f1528eab1`. The experimental-loader deprecation warning did not fail tests.  
+**New pending tests:** commit `ae04531d598309b8d164e7145d62de42e58e4a22` adds two D1 behavior tests for password-reset/session revocation and email-change confirmation/replay. They have not yet been run; the prior 34/34 PASS does not include them.  
 **Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` has not been applied to remote D1. Live runtime/production parity remains unverified.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
