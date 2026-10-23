@@ -4,12 +4,13 @@
 
 **Canonical handoff branch:** `feature/mod01-single-file-worker`  
 **Prior modular branch:** `feature/mod01-cloudflare-access-admin`  
-**Status (2026-10-23):** Source and Access tests exist on this branch. Production Worker is named `sbiz`; live Access redirect was observed, but current production routes returned `Not Found`, so the deployed code has not yet been proven to match this branch. Owner-controlled redeployment and runtime verification are still required.  
+**Status (2026-10-23):** Source contains account/authentication flows and an admin business dashboard. This branch also adds slug-history migration/code/tests, but automated tests have not yet been run in this environment and migration 0002 has not been applied remotely. Live runtime/production parity remains unverified; owner-controlled migration/deployment and runtime verification are still required.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
 ## Files added/changed
 
 - `migrations/0001_mod01_account_business_traceability.sql` — D1 tables for accounts, businesses, memberships, pending registration/email-change/reset tokens, sessions, per-cycle subscription history, event history, and rate limiting.
+- `migrations/0002_mod01_business_slug_history.sql` — initial and changed business slug history; **must be applied to the intended D1 database before deploying the Worker version that uses it**.
 - `src/shared/smtp-mailer.js` — SMTP over Workers TCP sockets using implicit TLS on port 465.
 - `src/shared/cloudflare-access.js` — cryptographic Cloudflare Access JWT verification.
 - `src/modules/mod01.js` — minimal Create/Login/verification/password-reset pages and account/business traceability API.
@@ -83,7 +84,7 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 - `POST /api/v1/businesses/{business_id}/email` and `POST /api/v1/email/confirm` — email-change request and confirmation to the new email.
 - Hourly scheduled cleanup for expired pending registrations, email-change requests, password-reset tokens, stale sessions and old rate-limit records.
 - `PATCH /api/v1/businesses/{business_id}/slug` — owner/admin slug update; short slugs (12 characters or fewer) require system admin.
-- `GET /admin` — protected by Cloudflare Access; currently a placeholder, not a complete admin dashboard.
+- `GET /admin` — protected by Cloudflare Access; source contains a business list/search/filter, detail/history view and document-link verification workflow. Runtime behavior is not yet verified.
 - `GET /api/v1/admin/businesses?limit=50` — Cloudflare Access-only list of business IDs and verification-document status.
 - `GET /api/v1/admin/businesses/{business_id}` — Cloudflare Access-only traceability record and event history.
 - `PATCH /api/v1/admin/businesses/{business_id}` — Cloudflare Access-only manual entry/update of the HTTPS business-registration document URL; this action marks the business verified and records document-link and approval events. Audit records identify the Access email in event metadata; no SBiz admin account is required.
@@ -92,11 +93,11 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 ## Important known limits before production
 
 1. The current first-pass UI uses English copy. The five language links are visible, but full translated UI strings and language-persistent routing are not yet implemented.
-2. The admin document URL API is implemented; a complete admin dashboard/navigation is not.
+2. The admin dashboard is implemented in the current source, but remains a first-pass MOD01 admin surface; live behavior and all error states still require testing.
 3. Email sending uses Workers TCP sockets to Yandex SMTP. It must be tested in the actual Worker runtime with the secret configured. Do not assume SMTP works until a real test message is received and logs are checked.
 4. Email-change verification and hourly cleanup of temporary tokens are implemented. Scheduled deletion of business data, subscription event ingestion, and a complete product slug history/redirect resolver are not implemented in this first source slice.
 5. The SQL schema stores subscription timestamps and data-deletion timestamp, and records business events, but subscription billing and data purging are not implemented here.
-6. Admin authorization depends on a correctly configured Cloudflare Access application, an owner-approved Access policy, and the matching `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` Worker vars. Do not treat the `/admin` placeholder as a complete dashboard.
+6. Admin authorization depends on a correctly configured Cloudflare Access application, an owner-approved Access policy, and the matching `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` Worker vars. The Worker verifies the JWT but does not enforce a code-level owner-email allowlist; the external Access policy must restrict access to the approved owner/admin identity.
 7. No claim of production readiness, deployment success, or passing tests is made until checks and owner-side runtime verification are completed.
 
 ## Post-deploy verification
@@ -107,6 +108,14 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 4. Submit a test registration using a controlled mailbox and a valid unique slug.
 5. Confirm the email arrives, open the link within 30 minutes, set a password, and verify the account/business rows in D1.
 6. Test duplicate email, duplicate slug, invalid slug, expired token, failed SMTP, wrong password, forgot-password neutral response, and one-time reset-token behavior.
-7. Verify `/admin` returns the placeholder HTML (not `Not Found`) and `/api/v1/admin/businesses?limit=50` returns `{\"businesses\": [...]}` with valid Access; verify both are blocked without a valid Access JWT. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header.
+7. Verify `/admin` returns the admin dashboard (not `Not Found`) and `/api/v1/admin/businesses?limit=50` returns `{\"businesses\": [...]}` with valid Access; verify both are blocked without a valid Access JWT. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header.
 8. Verify Access-authorized access to the business traceability record and document URL update.
 9. Verify event rows retain business creation, email verification, email changes, admin document-link changes and verification approval.
+
+
+## Slug-history change (2026-10-23)
+
+- New contract test: `qa/mod01-slug-history-contract.test.mjs`.
+- Run `npm run check`, `npm run test:slug-history`, and `npm run test:access` on the exact branch HEAD before accepting the change.
+- The owner must review and apply `migrations/0002_mod01_business_slug_history.sql` to the intended D1 database before deploying the updated Worker. Do not apply remote migrations without owner approval.
+- Slug history is recorded; public old-slug redirects remain a separate gap until the public business-page resolver exists.
