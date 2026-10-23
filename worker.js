@@ -759,7 +759,7 @@ function normalizeCustomHostname(value) {
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.includes(":")) return null;
   const labels = hostname.split(".");
   if (labels.some(label => !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label))) return null;
-  if (!/^[a-z]{2,63}$/.test(labels[labels.length - 1])) return null;
+  if (!/^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/.test(labels[labels.length - 1])) return null;
   return hostname;
 }
 
@@ -1000,8 +1000,14 @@ async function cleanupMod01(env) {
     db.prepare("DELETE FROM email_change_requests WHERE expires_at<=? OR used_at IS NOT NULL").bind(now),
     db.prepare("DELETE FROM password_reset_tokens WHERE expires_at<=? OR used_at IS NOT NULL").bind(now),
     db.prepare("DELETE FROM auth_sessions WHERE expires_at<=? OR revoked_at IS NOT NULL").bind(cutoff),
-    db.prepare("DELETE FROM email_rate_limits WHERE window_started_at<=?").bind(cutoff)
+    db.prepare("DELETE FROM email_rate_limits WHERE window_started_at<=?").bind(cutoff),
+    db.prepare("UPDATE business_custom_domains SET status='error',error_code='DNS_CHALLENGE_EXPIRED',updated_at=? WHERE status='pending_dns' AND verification_expires_at<=?").bind(now, now)
   ]);
+  const expiredDomains = await db.prepare("SELECT domain_id,business_id,hostname FROM business_custom_domains WHERE status='error' AND error_code='DNS_CHALLENGE_EXPIRED' AND updated_at=?").bind(now).all();
+  for (const domain of expiredDomains.results || []) {
+    await db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,old_value,new_value,metadata_json) SELECT ?, ?, 'custom_domain_verification_expired', ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM business_events WHERE business_id=? AND event_type='custom_domain_verification_expired' AND new_value=? AND metadata_json LIKE ?) ")
+      .bind(uuid(), domain.business_id, now, "pending_dns", domain.hostname, JSON.stringify({ domainId: domain.domain_id }), domain.business_id, domain.hostname, "%"+domain.domain_id+"%").run();
+  }
 }
 
 /* [HEALTH][BACKEND][START]
