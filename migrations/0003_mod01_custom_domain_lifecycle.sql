@@ -27,6 +27,10 @@ CREATE TABLE IF NOT EXISTS business_custom_domains (
   provider_hostname_id TEXT UNIQUE,
   provider_status TEXT,
   ssl_status TEXT,
+  provider_validation_json TEXT,
+  ssl_validation_json TEXT,
+  cname_target TEXT,
+  routing_verified_at TEXT,
   last_provider_check_at TEXT,
   error_code TEXT,
   created_at TEXT NOT NULL,
@@ -34,7 +38,7 @@ CREATE TABLE IF NOT EXISTS business_custom_domains (
   removed_at TEXT,
   FOREIGN KEY (business_id) REFERENCES businesses(business_id),
   CHECK (status IN ('pending_dns', 'removed') OR verified_at IS NOT NULL OR (status = 'error' AND error_code IS NOT NULL AND error_code = 'DNS_CHALLENGE_EXPIRED')),
-  CHECK (status <> 'active' OR (verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status IS NOT NULL AND provider_status = 'active' AND ssl_status IS NOT NULL AND ssl_status = 'active'))
+  CHECK (status <> 'active' OR (verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status IS NOT NULL AND provider_status = 'active' AND ssl_status IS NOT NULL AND ssl_status = 'active' AND routing_verified_at IS NOT NULL))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_business_custom_domains_live_hostname
