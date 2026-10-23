@@ -128,7 +128,7 @@ Ngoài các trường hiện hành, lưu sự kiện riêng cho:
 
 Mỗi sự kiện gắn với Business ID và ghi thời điểm. Với thay đổi, lưu giá trị trước/sau khi cần thiết cho truy vết; phân biệt sự kiện thành công và thất bại. Lịch sử không được ghi đè làm mất dấu vết cũ. Email cũ, URL tài liệu và dữ liệu nhạy cảm chỉ được truy cập theo quyền hạn phù hợp.
 
-Ngày hết hạn hiện hành không thay thế lịch sử từng kỳ gói cước. Mỗi lần mua/gia hạn phải có bản ghi lịch sử riêng.
+Ngày hết hạn hiện hành không thay thế lịch sử từng kỳ gói cước. Mỗi lần mua/gia hạn phải có bản ghi riêng trong `business_subscription_history`, ngoài sự kiện truy vết tương ứng.
 
 ### 10.4. Xóa dữ liệu vận hành
 Khi xóa dữ liệu vận hành để tối ưu tài nguyên:
