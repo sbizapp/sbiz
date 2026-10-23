@@ -341,3 +341,29 @@ test("business ID capacity exhaustion blocks registration without creating parti
   assert.equal(f.db.prepare("SELECT next_value FROM business_id_sequence WHERE sequence_name='business'").first().next_value, 1000000000);
 });
 
+test("localized account routes keep locale in paths and document language", async () => {
+  const home = await worker.fetch(new Request("https://sbiz.app/vi"), {}, { waitUntil() {} });
+  assert.equal(home.status, 200);
+  const homeHtml = await home.text();
+  assert.match(homeHtml, /<html lang="vi">/);
+  assert.match(homeHtml, /href="\/vi\/create"/);
+  assert.match(homeHtml, /href="\/vi\/login"/);
+  assert.match(homeHtml, /href="\/es"/);
+
+  const create = await worker.fetch(new Request("https://sbiz.app/vi/create"), {}, { waitUntil() {} });
+  assert.equal(create.status, 200);
+  const createHtml = await create.text();
+  assert.match(createHtml, /<html lang="vi">/);
+  assert.match(createHtml, /uiLanguage:"vi"/);
+  assert.match(createHtml, /href="\/vi\/login"/);
+
+  const login = await worker.fetch(new Request("https://sbiz.app/vi/login"), {}, { waitUntil() {} });
+  assert.equal(login.status, 200);
+  assert.match(await login.text(), /location\.href="\/vi\/dashboard"/);
+});
+
+test("localized URL prefix cannot bypass the admin route boundary", async () => {
+  const response = await worker.fetch(new Request("https://sbiz.app/vi/admin"), {}, { waitUntil() {} });
+  assert.equal(response.status, 404);
+  assert.doesNotMatch(await response.text(), /Business administration/);
+});
