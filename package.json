@@ -1,0 +1,15 @@
+{
+  "name": "sbiz-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check worker.js && node --check src/router.js && node --check src/modules/mod01.js && node --check src/shared/smtp-mailer.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply sbiz-app-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply sbiz-app-db --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
