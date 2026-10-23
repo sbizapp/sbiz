@@ -13,8 +13,8 @@ export function handleHealth(request) {
   return new Response(
     JSON.stringify({
       status: "ok",
-      service: "sbiz-app",
-      phase: "bootstrap",
+      service: "sbiz",
+      phase: "mod01",
     }),
     {
       status: 200,
