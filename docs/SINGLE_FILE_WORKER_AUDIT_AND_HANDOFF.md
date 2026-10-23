@@ -35,7 +35,7 @@ These values are copied from existing source/configuration and the infrastructur
 - No Cloudflare API token, SMTP password, Paddle key, or webhook secret was copied into the Worker.
 - Current MODUL 01 source has no Paddle API integration. Do not infer billing is configured.
 - SMTP uses the Workers `cloudflare:sockets` API with implicit TLS. Actual delivery must be verified in the deployed runtime.
-- Cloudflare Access verifies JWTs against the configured team and audience. Admin paths fail closed when Access configuration or token verification fails.
+- Cloudflare Access verifies JWTs against the configured team and audience. Admin paths fail closed when Access configuration or token verification fails. **Security condition:** the application code only checks that the Access email header was set after JWT verification; it does not independently compare that email against an owner allowlist. The Cloudflare Access application policy must restrict these routes to the owner's approved identity before deployment.
 - The Worker uses the D1, KV and R2 bindings as configured. The SQL migration remains separate and must be applied to the intended D1 database by the owner; consolidating source does not create tables.
 
 ## 4. Scope limitations carried forward
