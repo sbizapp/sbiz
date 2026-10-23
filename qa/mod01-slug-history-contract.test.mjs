@@ -23,3 +23,14 @@ test("slug changes close the prior current entry and append a new history entry"
   assert.match(worker, /INSERT INTO business_slug_history \(slug_history_id,business_id,slug,valid_from,valid_to,changed_by_account_id,change_source\) VALUES/);
   assert.match(worker, /changeSource = admin \? "admin" : "owner"/);
 });
+
+test("dashboard renders account and business data containers", () => {
+  assert.match(worker, /Your dashboard/);
+  assert.match(worker, /Signed in as/);
+  assert.match(worker, /Your businesses/);
+  assert.match(worker, /fetch\("\/api\/v1\/me"/);
+});
+test("admin detail panel stays hidden until opened", () => {
+  assert.match(worker, /\.detail:not\(\.open\)\{display:none\}/);
+  assert.match(worker, /value="unverified">Unverified/);
+});
