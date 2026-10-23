@@ -47,18 +47,19 @@ These are code and repository changes only. The new migration has **not** been a
 
 - Source and configuration review: **performed**.
 - Slug-history migration and code hooks: **added; migration/backfill and update SQL shape smoke-tested against a minimal local SQLite schema; not executed against D1**.
-- Owner ran `npm test` at HEAD `5436d2ed8a1a49af46a89081cffc624dfe589a02`: syntax checks passed, slug-history contract tests passed 7/7, and Cloudflare Access tests passed 17/17. This evidence applies only to that HEAD and those two suites.
-- Added `qa/mod01-d1-behavior.test.mjs`, a SQLite-backed Worker behavior suite covering `/api/v1/me`, owner-only L1 updates, audit-event persistence, slug-history updates, slug conflict non-mutation, and invalid-language rejection. Wired into `npm test` on the newer branch HEAD; **this new suite has not yet been run**, so current-head test status is pending owner execution.
+- Owner ran the full `npm test` on branch `cleanup/repository-organization-2026-10-23`, exact HEAD `3aeb3c6496c0d095a9cd1f60b528d60e2ffd54a3`. Reported result: `npm run check` passed; slug-history contract tests 7/7 passed; Cloudflare Access tests 17/17 passed; SQLite-backed D1 behavior tests 6/6 passed. **Total: 30/30 tests passed** across the four checks in the `npm test` sequence. The Node experimental-loader deprecation warning appeared but did not fail tests.
+- The D1 behavior suite covers `/api/v1/me`, owner-only L1 updates, audit-event persistence, slug-history updates, slug conflict non-mutation, and invalid-language rejection.
 - Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
+- Migration `0002_mod01_business_slug_history.sql` has **not** been applied to remote D1.
 - Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
 
 ## 5. Safe next execution order
 
-1. On the latest branch HEAD, run `npm install` and `npm test`; this now includes the SQLite-backed D1 behavior suite. Fix any failures before proceeding.
-2. Review and apply migration 0002 to the intended D1 database only after the owner confirms the target and migration state. Do not deploy code that references `business_slug_history` before the table exists.
-3. Add behavioral D1 tests for registration/slug/language changes and race/failure cases.
-4. Expand the dashboard into the full subscription-aware control center after subscription data and entitlement rules are implemented.
-5. Implement the remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion and retention/purge behavior.
+1. **Completed:** owner ran `npm test` on exact HEAD `3aeb3c6496c0d095a9cd1f60b528d60e2ffd54a3`; all 30 tests passed.
+2. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
+3. Add behavioral D1 tests for registration completion, email/token failure paths, and race/failure cases where they can be tested safely without production resources.
+4. Expand the dashboard into the full subscription-aware control center only when the authoritative subscription/entitlement rules and corresponding approved segment scenario are ready.
+5. Implement remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion, and retention/purge behavior, without inventing unresolved product rules.
 6. Owner verifies Cloudflare Access policy, secrets, bindings and live runtime. Deployment and remote migrations remain owner-controlled.
 
 No production deployment, remote migration, Cloudflare resource change, or workflow run was performed.
