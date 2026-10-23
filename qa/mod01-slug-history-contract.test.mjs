@@ -52,3 +52,18 @@ test("admin traceability exposes and renders immutable slug history", () => {
   assert.match(worker, /id="slug-history"/);
   assert.match(worker, /d\.slug_history\|\|\[\]/);
 });
+
+test("admin traceability includes subscription history and custom domain provider state", () => {
+  assert.match(worker, /SELECT provider,provider_reference,plan_code,term_years,amount_minor_units,currency,status,purchased_at,starts_at,expires_at,ended_at,created_at,updated_at FROM business_subscription_history/);
+  assert.match(worker, /subscriptions: subscriptions\.results \|\| \[\]/);
+  assert.match(worker, /SELECT domain_id,hostname,status,verified_at,provider_status,ssl_status,last_provider_check_at,error_code,created_at,updated_at,removed_at FROM business_custom_domains/);
+  assert.match(worker, /domains: domains\.results \|\| \[\]/);
+  assert.match(worker, /id="subscription-history"/);
+  assert.match(worker, /id="domain-history"/);
+});
+
+test("custom hostname activation requires provider and SSL active states", () => {
+  assert.match(worker, /providerStatus === "active" && sslStatus === "active"/);
+  assert.match(worker, /CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED/);
+  assert.match(worker, /verification_expires_at<=\?/);
+});
