@@ -447,6 +447,21 @@ async function adminBusiness(request, env, businessId) {
 export async function routeMod01(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
+  const backgroundAssets = {
+    "/assets/background-light.jpg": "assets/background-light.jpg",
+    "/assets/background-dark.jpg": "assets/background-dark.jpg",
+  };
+  if (Object.hasOwn(backgroundAssets, path)) {
+    if (!env.SBIZ_APP_R2) return json({ error: "ASSET_STORAGE_UNAVAILABLE" }, 503);
+    const object = await env.SBIZ_APP_R2.get(backgroundAssets[path]);
+    if (!object) return json({ error: "ASSET_NOT_FOUND" }, 404);
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("content-type", "image/jpeg");
+    headers.set("cache-control", "public, max-age=86400, stale-while-revalidate=604800");
+    headers.set("x-content-type-options", "nosniff");
+    return new Response(object.body, { headers });
+  }
   const pageResponse = pageForPath(path, url);
   if (pageResponse) return pageResponse;
   if (path === "/api/v1/register" && request.method === "POST") return register(request, env);
