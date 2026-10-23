@@ -686,3 +686,40 @@ test("custom domain removal requires provider confirmation before marking remove
     globalThis.fetch = originalFetch;
   }
 });
+
+test("custom hostname is not provisioned until the Cloudflare fallback origin is active", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const created = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "origin-pending.example.com" }
+  }), f.env, { waitUntil() {} });
+  const challenge = await created.json();
+  const token = challenge.dns.value.slice("sbiz-domain-verification=".length);
+  const originalFetch = globalThis.fetch;
+  let createCalls = 0;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input);
+    if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
+      return new Response(JSON.stringify({ Answer: [{ type: 16, data: '"sbiz-domain-verification=' + token + '"' }] }), { status: 200 });
+    }
+    if (url.endsWith("/custom_hostnames/fallback_origin")) {
+      return new Response(JSON.stringify({ success: true, result: { origin: "fallback.saas.example.net", status: "pending_deployment" } }), { status: 200 });
+    }
+    if (url.includes("/custom_hostnames") && init.method === "POST") createCalls++;
+    throw new Error("The provider hostname must not be created while fallback origin is pending.");
+  };
+  try {
+    const response = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
+      method: "POST", body: {}
+    }), { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" }, { waitUntil() {} });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error, "FALLBACK_ORIGIN_NOT_ACTIVE");
+    assert.equal(createCalls, 0);
+    const saved = f.db.prepare("SELECT status,error_code,provider_hostname_id FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    assert.equal(saved.status, "pending_provider");
+    assert.equal(saved.error_code, "FALLBACK_ORIGIN_NOT_ACTIVE");
+    assert.equal(saved.provider_hostname_id, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
