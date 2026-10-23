@@ -1,16 +1,18 @@
 # sbiz.app — Default Background, Themes, and Liquid Glass Design Tokens
 
-**Status:** Approved design direction; implementation pending.
+**Status:** Owner-approved paired backgrounds; implementation in progress. The approved pair is the supplied blue-cloud background for Light Mode and the dark cyan/blue/magenta wave background for Dark Mode.
 **Scope:** Visual design system and appearance preferences. This document does not authorize frontend implementation or deployment.
 
 ## 1. Default background
 
-Use the original first sbiz.app Liquid Glass UI concept generated during the design discussion: the soft pastel mountain-and-sky landscape behind the light and dark dashboards and mobile screens.
+Use the two images supplied and approved by the Owner on 2026-10-23 as the default paired backgrounds:
 
-- This is the default background choice.
-- Do not replace it with the later plain neutral-background concept.
-- Retain the original image as a named, version-controlled project asset so users can restore it after choosing another background.
-- The original generated image file still needs to be added to the repository's asset directory before implementation can reference it. This document records the approved visual choice and requirements, not proof that the image asset has been committed.
+- **Light Mode:** `background-light.jpg` — blue sky and clouds with flowing blue curves and light particles.
+- **Dark Mode:** `background-dark.jpg` — black background with flowing cyan/blue/magenta glass waves.
+- These two supplied images replace the previously proposed pastel mountain-and-sky direction. Do not substitute unrelated images or describe these files as the earlier generated concept.
+- Preserve the supplied originals. Optimized JPEG copies may be used for delivery without changing the approved composition.
+- Runtime R2 keys: `assets/background-light.jpg` and `assets/background-dark.jpg` in the `SBIZ_APP_R2` bucket, served at `/assets/background-light.jpg` and `/assets/background-dark.jpg`.
+- The current implementation follows the operating system color preference (`prefers-color-scheme`) to select Light or Dark Mode. A user-facing manual theme toggle is not part of this implementation unless separately approved.
 
 ### Background rendering rules
 
@@ -148,12 +150,12 @@ These flags are market-positioning cues in the UI, not a claim that English is e
 
 ## 7. Acceptance criteria
 
-1. The original first concept is the default background direction.
-2. The original image asset is present in the repository before implementation is considered complete.
-3. Users can select another background and restore the original default.
-4. Light and dark themes use the exact tokens specified in this document.
-5. Glass opacity, border thickness, highlight thickness, highlight blur, backdrop blur, radii, shadows, and transition timing use the shared numeric values above.
+1. The Owner-approved pair is used: `background-light.jpg` for Light Mode and `background-dark.jpg` for Dark Mode.
+2. Both image assets are uploaded to the configured R2 bucket at the exact keys documented above and served successfully by the Worker.
+3. Light/Dark selection follows the system preference; a manual theme toggle is not implied by this implementation.
+4. Light and dark surfaces use the applicable color tokens specified in this document.
+5. Glass opacity, border thickness, highlight thickness, highlight blur, backdrop blur, radii, shadows, and transition timing use the shared numeric values above wherever implemented.
 6. Modules do not invent their own Liquid Glass values.
 7. The language selector uses `en` with the United States flag, `es` with the Mexican flag, and `pt` with the Brazilian flag, while retaining the correct language codes.
 8. Tables, controls, and text remain readable on desktop and mobile.
-9. This document alone is not evidence that the image asset has been committed or the feature implemented.
+9. A code commit alone is not evidence that the R2 objects exist or that the live feature has been verified.
