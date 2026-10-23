@@ -1,7 +1,7 @@
 -- [MOD01][DATA][START]
 -- Business/account identity, registration, authentication, and traceability.
 -- Apply with: npx wrangler d1 migrations apply sbiz-app-db --remote
-PRAGMA foreign_keys = ON;
+-- D1 enforces foreign keys; no PRAGMA override is required.
 
 CREATE TABLE IF NOT EXISTS business_id_sequence (
   sequence_name TEXT PRIMARY KEY CHECK (sequence_name = 'business'),
