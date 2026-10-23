@@ -109,7 +109,9 @@ Hồ sơ truy vết được gắn với Business ID và giữ các mốc/sự k
 - `subscription_started_at`: ngày ghi nhận mua gói cước thành công.
 - `subscription_expires_at`: ngày gói cước hết hiệu lực hiện hành.
 - `data_deleted_at`: ngày xóa dữ liệu vận hành; chỉ ghi khi sự kiện tương ứng thực sự xảy ra.
-- `business_registration_document_url`: đường link giấy đăng ký kinh doanh dùng làm tài liệu tham chiếu khi admin xác minh/phê duyệt doanh nghiệp.\n- `verification_status`: trạng thái xác minh doanh nghiệp (`unverified`, `verified`, `rejected`).\n- `admin_verified_at`: thời điểm admin phê duyệt/xác minh doanh nghiệp.
+- `business_registration_document_url`: đường link giấy đăng ký kinh doanh dùng làm tài liệu tham chiếu khi admin xác minh/phê duyệt doanh nghiệp.
+- `verification_status`: trạng thái xác minh doanh nghiệp (`unverified`, `verified`, `rejected`).
+- `admin_verified_at`: thời điểm admin phê duyệt/xác minh doanh nghiệp.
 
 ### 10.2. Đường link giấy đăng ký kinh doanh
 Trường `business_registration_document_url` được admin hệ thống SBiz điền thủ công khi phê duyệt/xác minh hồ sơ doanh nghiệp. Khi admin lưu đường link hợp lệ, hệ thống chuyển `verification_status` sang `verified`, ghi `admin_verified_at` và tạo sự kiện truy vết. Đây là trường liên kết đến tài liệu tham chiếu; không phải bằng chứng tự động rằng tài liệu hợp lệ. Cần lưu dấu vết ai nhập hoặc sửa đường link và thời điểm thay đổi. Chỉ admin có quyền mới được chỉnh sửa trường này. Không yêu cầu người dùng nhập trường này trong biểu mẫu đăng ký ba trường.
