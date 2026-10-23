@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   subscription_expires_at TEXT,
   data_deleted_at TEXT,
   registration_document_url TEXT,
+  verification_status TEXT NOT NULL DEFAULT 'unverified' CHECK (verification_status IN ('unverified', 'verified', 'rejected')),
   admin_verified_at TEXT,
   status TEXT NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'locked', 'data_purged', 'closed')),
