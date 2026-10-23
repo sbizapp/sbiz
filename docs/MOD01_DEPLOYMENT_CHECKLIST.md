@@ -36,6 +36,18 @@ These two non-secret Worker vars are required by the Worker to validate Cloudfla
 
 System administration is authorized by Cloudflare Access, not by a special SBiz account email or password. Configure a Cloudflare Access self-hosted application for `sbiz.app` and restrict it to the owner's approved identity (or an explicitly approved admin group). Protect both `/admin` and `/api/v1/admin/*`. The Worker independently verifies the `Cf-Access-Jwt-Assertion` signature, issuer, audience, expiry, and email claim. Do not rely on an email header supplied by the browser.
 
+## Cloudflare Access setup for the admin area
+
+Before deploying this branch, configure the Access application in the Cloudflare Zero Trust dashboard:
+
+1. Open **Access → Applications** and add a **Self-hosted** application for the SBiz admin area.
+2. Protect hostname `sbiz.app` with path coverage for `/admin`, `/admin/*`, `/api/v1/admin`, and `/api/v1/admin/*`. If the dashboard accepts path patterns, ensure both the exact paths and nested paths are covered.
+3. Create an **Allow** policy restricted to the owner's exact identity or an explicitly approved admin group. Do not use a broad `Everyone` allow policy.
+4. Copy the Access application's **AUD tag** and the team's `<team-name>.cloudflareaccess.com` domain.
+5. Add those values to the `CF_ACCESS_AUD` and `CF_ACCESS_TEAM_DOMAIN` entries in `wrangler.jsonc`. Do not use example placeholders as live values.
+6. Keep the application fail-closed until both values are set. The Worker independently validates the Access JWT, so direct requests to the Worker cannot bypass the Access policy merely by supplying an email header.
+7. Confirm the Access application is configured before owner-authorized deployment. This branch does not create or modify the Access application in Cloudflare.
+
 ## Owner-run preparation
 
 From a clean checkout of this branch:
