@@ -5,6 +5,7 @@
 **Current verification branch:** `cleanup/repository-organization-2026-10-23`  
 **Last owner-tested HEAD:** `153ece4889d0d13eb9340f79cd84fa7ceb708b7f`  
 **Last owner-run test result:** `npm test` passed all 36 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 12/12. This includes registration/verification, password-reset/session revocation, and email-change confirmation/replay behavior tests. The experimental-loader deprecation warning did not fail tests.  
+**New pending test:** commit `a4f7e619fb557f723a988c4235d74dc815a53758` adds a test that business ID capacity exhaustion creates no partial records and preserves the pending request. This has not been run; prior 36/36 PASS does not include it.  
 **Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` has not been applied to remote D1. Live runtime/production parity remains unverified.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
