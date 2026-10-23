@@ -309,6 +309,11 @@ function clearSessionCookie() {
 function page(title, content, language = "en") {
   return `<!doctype html><html lang="${["en", "vi", "id", "es", "pt"].includes(language) ? language : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} — SBiz</title><style>:root{font-family:Roboto,Arial,sans-serif;color:#111827;background:#fff;font-synthesis:none}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#fff}main{width:min(100%,440px);padding:24px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.05)}h1{font-size:1.5rem;margin:0 0 8px;font-weight:500}p{line-height:1.5;color:#6b7280}label{display:block;font-size:.9rem;font-weight:500;margin:16px 0 6px}input,select{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;font:inherit;color:#111827;background:#fff}input:focus,select:focus{outline:2px solid #9ca3af;outline-offset:1px}button,a.button{display:block;width:100%;margin-top:16px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;color:#111827;font:inherit;font-weight:500;text-align:center;text-decoration:none;cursor:pointer}a.secondary{display:block;text-align:center;margin-top:16px;color:#4b5563}#message{white-space:pre-wrap;margin-top:14px;color:#6b7280}small{color:#6b7280}</style></head><body><main><h1>${title}</h1>${content}</main></body></html>`;
 }
+function localizedPath(language, path) {
+  const lang = ["en", "vi", "id", "es", "pt"].includes(language) ? language : "en";
+  const target = path.startsWith("/") ? path : "/" + path;
+  return lang === "en" ? target : "/" + lang + (target === "/" ? "" : target);
+}
 function pageForPath(path, url) {
   const languageMatch = path.match(/^\/(vi|id|es|pt)(?=\/|$)(.*)$/);
   const uiLanguage = languageMatch ? languageMatch[1] : "en";
