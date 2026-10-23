@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS business_custom_domains (
     )),
   verification_token_hash TEXT NOT NULL,
   verification_created_at TEXT NOT NULL,
+  verification_expires_at TEXT NOT NULL,
   verified_at TEXT,
   provider_hostname_id TEXT UNIQUE,
   provider_status TEXT,
