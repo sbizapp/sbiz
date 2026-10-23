@@ -110,6 +110,11 @@ test("D1-backed /me returns the authenticated account and its business", async t
   assert.equal(body.email, "owner@example.test");
   assert.equal(body.businesses.length, 1);
   assert.equal(body.businesses[0].business_id, "sbiz-000000001");
+  assert.equal(body.businesses[0].verification_status, "unverified");
+  assert.equal(body.businesses[0].admin_verified_at, null);
+  assert.equal(body.businesses[0].subscription_started_at, null);
+  assert.equal(body.businesses[0].subscription_expires_at, null);
+  assert.equal(body.businesses[0].data_deleted_at, null);
 });
 
 test("owner language update persists the new L1 and writes an audit event", async t => {
