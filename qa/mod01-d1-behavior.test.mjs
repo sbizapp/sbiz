@@ -640,9 +640,9 @@ test("dashboard renders custom-domain controls in each supported locale", async 
   const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
   assert.match(source, /id="domain-form"/);
   assert.match(source, /id="domain-business"/);
-  assert.match(source, /\/api\/v1\/businesses\/\+encodeURIComponent\(selectedDomainBusinessId\)\+"\/domains"/);
+  assert.match(source, /\/api\/v1\/businesses\/"\+encodeURIComponent\(selectedDomainBusinessId\)\+"\/domains"/);
   assert.match(source, /Activation requires an active fallback origin, hostname, SSL and verified CNAME routing/);
-  assert.match(source, /Tên miền chỉ hoạt động khi Cloudflare xác nhận tên miền và SSL/);
+  assert.match(source, /Chỉ kích hoạt khi fallback origin, hostname, SSL và CNAME đều được xác minh/);
 });
 
 test("custom domain removal requires provider confirmation before marking removed", async t => {
