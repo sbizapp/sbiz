@@ -163,9 +163,11 @@ async function register(request, env) {
   await db.prepare(`INSERT INTO registration_requests (request_id,email,requested_slug,default_language,token_hash,created_at,expires_at,attempts)
     VALUES (?,?,?,?,?,?,?,0)`).bind(requestId, email, slug, language, await sha256(token), now.toISOString(), expires).run();
   const verifyUrl = new URL("/verify?token=" + encodeURIComponent(token), request.url).toString();
+  // Mark the token as eligible immediately before send to avoid a fast-click race.
+  // If sending fails, delete the pending request so the token cannot be used.
+  await db.prepare("UPDATE registration_requests SET email_sent_at=?,last_sent_at=? WHERE request_id=?").bind(nowIso(), nowIso(), requestId).run();
   try {
     await sendMail(env, { to: email, subject: "Verify your SBiz account", text: "Open this link to verify your email and set your account password. The link expires in 30 minutes:\n\n" + verifyUrl + "\n\nIf you did not request this, you can ignore this email." });
-    await db.prepare("UPDATE registration_requests SET email_sent_at=?,last_sent_at=? WHERE request_id=?").bind(nowIso(), nowIso(), requestId).run();
   } catch {
     await db.prepare("DELETE FROM registration_requests WHERE request_id=?").bind(requestId).run();
     return json({ error: "EMAIL_SEND_FAILED", message: "We could not send the verification email. Your account has not been created. Please try again later." }, 503);
