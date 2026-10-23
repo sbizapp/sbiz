@@ -49,7 +49,8 @@ These are code and repository changes only. The new migration has **not** been a
 - Slug-history migration and code hooks: **added; migration/backfill and update SQL shape smoke-tested against a minimal local SQLite schema; not executed against D1**.
 - Owner ran `npm test` on exact HEAD `3921c4bb8f1a6a484f1c7d1fe1d08e6ab785666f` on branch `cleanup/repository-organization-2026-10-23`. Reported result: syntax checks passed; slug-history tests 7/7; Cloudflare Access tests 17/17; SQLite-backed D1 behavior tests 10/10. **Total: 34/34 tests passed** across the four checks. The Node experimental-loader deprecation warning appeared but did not fail tests.
 - Owner subsequently ran `npm test` on exact HEAD `153ece4889d0d13eb9340f79cd84fa7ceb708b7f` on branch `cleanup/repository-organization-2026-10-23`. Reported result: syntax checks passed; slug-history tests 7/7; Cloudflare Access tests 17/17; SQLite-backed D1 behavior tests 12/12. **Total: 36/36 tests passed** across the four checks. The experimental-loader deprecation warning did not fail tests.
-- The D1 behavior suite now covers password-reset one-time-token/session revocation and email-change confirmation/event/replay in addition to registration, slug-history, language authorization and account lookup behaviors. This is owner-reported local test evidence at the exact HEAD above. It does not verify Cloudflare live runtime, SMTP delivery, remote D1 parity, migration application, or production deployment.
+- Follow-up code commit `a4f7e619fb557f723a988c4235d74dc815a53758` adds a test for business ID capacity exhaustion, asserting that no partial account/business is created and the pending request is retained. This test is **pending owner execution**; the 36/36 result does not include it.
+- The D1 behavior suite covers password-reset one-time-token/session revocation and email-change confirmation/event/replay in addition to registration, slug-history, language authorization and account lookup behaviors. This is owner-reported local test evidence at the exact HEAD above. It does not verify Cloudflare live runtime, SMTP delivery, remote D1 parity, migration application, or production deployment.
 - Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
 - Migration `0002_mod01_business_slug_history.sql` has **not** been applied to remote D1.
 - Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
@@ -57,7 +58,8 @@ These are code and repository changes only. The new migration has **not** been a
 ## 5. Safe next execution order
 
 1. **Completed:** owner ran `npm test` on exact HEAD `153ece4889d0d13eb9340f79cd84fa7ceb708b7f`; all 36 tests passed.
-2. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
+2. **Pending owner test run:** run the business ID capacity-exhaustion test added in commit `a4f7e619fb557f723a988c4235d74dc815a53758`.
+3. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
 4. Expand the dashboard into the full subscription-aware control center only when the authoritative subscription/entitlement rules and corresponding approved segment scenario are ready.
 5. Implement remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion, and retention/purge behavior, without inventing unresolved product rules.
 6. Owner verifies Cloudflare Access policy, secrets, bindings and live runtime. Deployment and remote migrations remain owner-controlled.
