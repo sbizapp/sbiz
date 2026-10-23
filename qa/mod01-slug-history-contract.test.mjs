@@ -45,3 +45,10 @@ test("dashboard exposes the five supported primary-language choices", () => {
   for (const code of ["en", "vi", "id", "es", "pt"]) assert.match(worker, new RegExp('\\["' + code + '"'));
   assert.match(worker, /Save language/);
 });
+
+test("admin traceability exposes and renders immutable slug history", () => {
+  assert.match(worker, /slugHistory = await db\.prepare\("SELECT slug,valid_from,valid_to,changed_by_account_id,change_source FROM business_slug_history/);
+  assert.match(worker, /slug_history: slugHistory\.results \|\| \[\]/);
+  assert.match(worker, /id="slug-history"/);
+  assert.match(worker, /d\.slug_history\|\|\[\]/);
+});
