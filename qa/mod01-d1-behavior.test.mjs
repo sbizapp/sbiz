@@ -173,3 +173,102 @@ test("invalid language is rejected without changing business data", async t => {
   assert.equal(response.status, 400);
   assert.equal(f.db.prepare("SELECT default_language FROM businesses WHERE business_id=?").bind("sbiz-000000001").first().default_language, "en");
 });
+
+
+function publicJsonRequest(path, body) {
+  return new Request("https://sbiz.app" + path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+async function emptyFixture() {
+  const db = new SQLiteD1();
+  db.exec(await readFile(new URL("../migrations/0001_mod01_account_business_traceability.sql", import.meta.url), "utf8"));
+  db.exec(await readFile(new URL("../migrations/0002_mod01_business_slug_history.sql", import.meta.url), "utf8"));
+  return { db, env: { SBIZ_APP_DB: db }, close: () => db.close() };
+}
+
+test("registration rejects invalid slug before creating pending or official records", async t => {
+  const f = await emptyFixture();
+  t.after(f.close);
+  const response = await worker.fetch(publicJsonRequest("/api/v1/register", {
+    email: "new@example.test",
+    slug: "bad-slug",
+    defaultLanguage: "en",
+  }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "INVALID_SLUG");
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM registration_requests").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM accounts").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM businesses").first().count, 0);
+});
+
+test("registration email-send failure removes the pending request and creates no account", async t => {
+  const f = await emptyFixture();
+  t.after(f.close);
+  const response = await worker.fetch(publicJsonRequest("/api/v1/register", {
+    email: "new@example.test",
+    slug: "newbusiness12345",
+    defaultLanguage: "vi",
+  }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error, "EMAIL_SEND_FAILED");
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM registration_requests").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM accounts").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM businesses").first().count, 0);
+});
+
+test("expired registration token cannot create an account and is removed", async t => {
+  const f = await emptyFixture();
+  t.after(f.close);
+  const token = "expired-registration-token-0123456789";
+  f.db.prepare("INSERT INTO registration_requests (request_id,email,requested_slug,default_language,token_hash,created_at,email_sent_at,expires_at,attempts) VALUES (?,?,?,?,?,?,?,?,0)")
+    .bind("expired-request", "new@example.test", "newbusiness12345", "en", await hashToken(token), now, now, new Date(Date.now() - 1000).toISOString()).run();
+  const response = await worker.fetch(publicJsonRequest("/api/v1/register/verify", {
+    token,
+    password: "LongEnoughPassword123!",
+  }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).error, "VERIFICATION_EXPIRED");
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM registration_requests").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM accounts").first().count, 0);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM businesses").first().count, 0);
+});
+
+test("valid registration verification atomically creates account, business, owner membership, slug history and audit events", async t => {
+  const f = await emptyFixture();
+  t.after(f.close);
+  const token = "valid-registration-token-0123456789";
+  f.db.prepare("INSERT INTO registration_requests (request_id,email,requested_slug,default_language,token_hash,created_at,email_sent_at,expires_at,attempts) VALUES (?,?,?,?,?,?,?,?,0)")
+    .bind("valid-request", "new@example.test", "newbusiness12345", "pt", await hashToken(token), now, now, future).run();
+  const response = await worker.fetch(publicJsonRequest("/api/v1/register/verify", {
+    token,
+    password: "LongEnoughPassword123!",
+  }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 201);
+  const body = await response.json();
+  assert.equal(body.business_id, "sbiz-000000001");
+  const account = f.db.prepare("SELECT email,email_verified_at,password_hash FROM accounts WHERE email=?").bind("new@example.test").first();
+  assert.ok(account.email_verified_at);
+  assert.ok(account.password_hash);
+  const business = f.db.prepare("SELECT business_id,current_slug,default_language FROM businesses WHERE business_id=?").bind(body.business_id).first();
+  assert.deepEqual({ business_id: business.business_id, current_slug: business.current_slug, default_language: business.default_language }, {
+    business_id: "sbiz-000000001",
+    current_slug: "newbusiness12345",
+    default_language: "pt",
+  });
+  assert.equal(f.db.prepare("SELECT role FROM business_memberships WHERE business_id=?").bind(body.business_id).first().role, "owner");
+  assert.equal(f.db.prepare("SELECT slug FROM business_slug_history WHERE business_id=? AND valid_to IS NULL").bind(body.business_id).first().slug, "newbusiness12345");
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM business_events WHERE business_id=? AND event_type IN ('business_created','email_verified')").bind(body.business_id).first().count, 2);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM registration_requests").first().count, 0);
+
+  const replay = await worker.fetch(publicJsonRequest("/api/v1/register/verify", {
+    token,
+    password: "LongEnoughPassword123!",
+  }), f.env, { waitUntil() {} });
+  assert.equal(replay.status, 410);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM accounts").first().count, 1);
+  assert.equal(f.db.prepare("SELECT count(*) AS count FROM businesses").first().count, 1);
+});
