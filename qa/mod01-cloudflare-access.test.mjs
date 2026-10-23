@@ -73,3 +73,49 @@ test("Worker does not trust a forged internal email header", async () => {
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error, "CLOUDFLARE_ACCESS_REQUIRED");
 });
+
+test("normal login page remains available without Cloudflare Access configuration", async () => {
+  const response = await worker.fetch(
+    new Request("https://sbiz.app/login"),
+    {},
+    { waitUntil() {} },
+  );
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") || "", /text\/html/);
+  assert.match(await response.text(), /Login/);
+});
+
+test("normal account creation page remains available without Cloudflare Access configuration", async () => {
+  const response = await worker.fetch(
+    new Request("https://sbiz.app/create"),
+    {},
+    { waitUntil() {} },
+  );
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") || "", /text\/html/);
+  assert.match(await response.text(), /Create your SBiz account/);
+});
+
+test("normal login API is not intercepted by the Admin Access gate", async () => {
+  const response = await worker.fetch(
+    new Request("https://sbiz.app/api/v1/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    }),
+    {},
+    { waitUntil() {} },
+  );
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "INVALID_CREDENTIALS");
+});
+
+test("normal home page remains available without Cloudflare Access configuration", async () => {
+  const response = await worker.fetch(
+    new Request("https://sbiz.app/"),
+    {},
+    { waitUntil() {} },
+  );
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Create/);
+});
