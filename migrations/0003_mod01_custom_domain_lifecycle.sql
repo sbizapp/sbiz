@@ -32,7 +32,9 @@ CREATE TABLE IF NOT EXISTS business_custom_domains (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   removed_at TEXT,
-  FOREIGN KEY (business_id) REFERENCES businesses(business_id)
+  FOREIGN KEY (business_id) REFERENCES businesses(business_id),
+  CHECK (status IN ('pending_dns', 'removed') OR verified_at IS NOT NULL),
+  CHECK (status <> 'active' OR (verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status = 'active' AND ssl_status = 'active'))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_business_custom_domains_live_hostname
