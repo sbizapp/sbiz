@@ -370,7 +370,8 @@ async function confirmEmailChange(request, env) {
     .bind(now, row.change_id, now).first();
   if (!consumed) return json({ error: "TOKEN_EXPIRED", message: "This email confirmation link has already been used or expired." }, 410);
   const statements = [
-    db.prepare("UPDATE accounts SET email=?,email_verified_at=?,updated_at=? WHERE account_id=?").bind(row.new_email, now, now, row.account_id)
+    db.prepare("UPDATE accounts SET email=?,email_verified_at=?,updated_at=? WHERE account_id=?").bind(row.new_email, now, now, row.account_id),
+    db.prepare("UPDATE email_change_requests SET used_at=? WHERE account_id=? AND used_at IS NULL").bind(now, row.account_id)
   ];
   for (const membership of memberships.results || []) {
     statements.push(db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'email_changed',?,?,?,?)")
