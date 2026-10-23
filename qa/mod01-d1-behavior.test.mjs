@@ -731,3 +731,21 @@ test("custom hostname is not provisioned until the Cloudflare fallback origin is
     globalThis.fetch = originalFetch;
   }
 });
+
+test("scheduled cleanup expires stale custom-domain challenges and preserves a traceability event", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const now = new Date().toISOString();
+  f.db.prepare("INSERT INTO business_custom_domains (domain_id,business_id,hostname,status,verification_token_hash,verification_created_at,verification_expires_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)")
+    .bind("expired-domain-challenge", "sbiz-000000001", "expired.example.com", "pending_dns", "hashed-token", "2026-10-20T00:00:00.000Z", "2026-10-20T00:00:00.000Z", now, now).run();
+  let cleanupPromise;
+  await worker.scheduled({ cron: "0 * * * *" }, f.env, { waitUntil(promise) { cleanupPromise = promise; } });
+  await cleanupPromise;
+  const saved = f.db.prepare("SELECT status,error_code FROM business_custom_domains WHERE domain_id=?").bind("expired-domain-challenge").get();
+  assert.equal(saved.status, "error");
+  assert.equal(saved.error_code, "DNS_CHALLENGE_EXPIRED");
+  const event = f.db.prepare("SELECT event_type,new_value,metadata_json FROM business_events WHERE business_id=? AND event_type='custom_domain_verification_expired'").bind("sbiz-000000001").get();
+  assert.ok(event);
+  assert.equal(event.new_value, "expired.example.com");
+  assert.match(event.metadata_json, /expired-domain-challenge/);
+});
