@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply sbiz-app-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply sbiz-app-db --remote",
-    "test:access": "node --test qa/mod01-cloudflare-access.test.mjs"
+    "test:access": "node --experimental-loader ./qa/node-cloudflare-compat-loader.mjs --test qa/mod01-cloudflare-access.test.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
