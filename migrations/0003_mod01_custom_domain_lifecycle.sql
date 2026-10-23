@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS business_custom_domains (
   updated_at TEXT NOT NULL,
   removed_at TEXT,
   FOREIGN KEY (business_id) REFERENCES businesses(business_id),
-  CHECK (status IN ('pending_dns', 'removed') OR verified_at IS NOT NULL OR (status = 'error' AND error_code = 'DNS_CHALLENGE_EXPIRED')),
-  CHECK (status <> 'active' OR (verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status = 'active' AND ssl_status = 'active'))
+  CHECK (status IN ('pending_dns', 'removed') OR verified_at IS NOT NULL OR (status = 'error' AND error_code IS NOT NULL AND error_code = 'DNS_CHALLENGE_EXPIRED')),
+  CHECK (status <> 'active' OR (verified_at IS NOT NULL AND provider_hostname_id IS NOT NULL AND provider_status IS NOT NULL AND provider_status = 'active' AND ssl_status IS NOT NULL AND ssl_status = 'active'))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_business_custom_domains_live_hostname
