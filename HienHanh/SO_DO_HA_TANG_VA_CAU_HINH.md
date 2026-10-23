@@ -188,3 +188,13 @@ Tài liệu chính thức về Worker variables/secrets:
 - [x] Public Development URL đang tắt; chưa có custom domain và chưa có CORS policy.
 - [ ] Chưa tạo schema/bảng và chưa có dữ liệu ứng dụng trong D1.
 - [ ] Quy trình kiểm thử sau deploy và khôi phục phiên bản được xác nhận.
+
+
+## 8. MOD-01 Custom Domain — code/configuration gate (2026-10-23)
+
+- Worker implementation and D1 schema are committed on branch `cleanup/repository-organization-2026-10-23`; migration: `migrations/0003_mod01_custom_domain_lifecycle.sql`.
+- The owner-only flow requests a hostname, returns a 24-hour DNS TXT challenge, verifies TXT ownership through DNS-over-HTTPS, and calls the Cloudflare for SaaS Custom Hostnames API to create/check/remove the provider hostname.
+- The Worker does not mark a hostname active unless the provider response reports both hostname `status=active` and `ssl.status=active`. If the provider credentials are absent, it returns a configuration error and keeps the hostname non-active.
+- Required Cloudflare Worker configuration names: secret `CLOUDFLARE_API_TOKEN`; variable `CLOUDFLARE_ZONE_ID`. These names are code requirements, **not evidence that either value exists or is configured**. Never put actual values in Git or chat.
+- Still unverified: correct zone ID, Cloudflare for SaaS entitlement/configuration, fallback origin, certificate issuance, DNS/routing behavior, and live custom hostname activation. Do not set secrets, alter DNS, apply migrations remotely, or deploy without owner approval.
+- Before deploying the Worker, owner must review/apply migrations 0002 and 0003 in the intended D1 environment. The current repository tests use an in-memory SQLite/D1 compatibility layer and do not prove the remote database schema is current.
