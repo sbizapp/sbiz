@@ -1,48 +1,60 @@
-# SBiz — Single-file Worker audit and owner handoff
+# SBiz — MOD01 Worker audit and implementation status
 
-**Prepared:** 2026-10-23  
-**Source branch:** `feature/mod01-single-file-worker`  
-**Base branch:** `feature/mod01-cloudflare-access-admin`  
-**Base commit:** `ac411ea00ad5406b6378b145c4de22befec03641`  
-**Deployment:** owner-controlled Cloudflare Dashboard. No deployment was performed.
+**Audit date:** 2026-10-23  
+**Audited source:** `worker.js` on `cleanup/repository-organization-2026-10-23`  
+**Starting source lineage:** `feature/mod01-single-file-worker`  
+**Deployment:** owner-controlled Cloudflare Dashboard. No deployment or remote database migration was performed.
 
-## 1. Consolidation
-`worker.js` now contains the existing SMTP mailer, Cloudflare Access JWT verification, MODUL 01 account/business logic, health endpoint, router/R2 image handling, Worker fetch entry point, and scheduled cleanup. The source is divided into identifiable sections. `/robots.txt` and `/sitemap.xml` are served directly by the Worker; the current sitemap contains only the canonical homepage and is not a complete sitemap for future public business pages.
+## 1. What is present in the current Worker
 
-## 2. Infrastructure inventory found in the repository
-These values are copied from existing source/configuration and the infrastructure register. They are not proof that the current Cloudflare account still has the same resources; owner should verify in Dashboard before deployment.
+- Public home, Create, Login, email-verification/password-setup, forgot-password, reset-password, and email-change confirmation pages.
+- Account registration, email verification, login/logout, session lookup, password reset, email change, business slug change, and event recording endpoints.
+- Business ID allocation from a D1 sequence and account/business/membership/event writes.
+- SMTP delivery through Workers TCP sockets; actual production mail delivery has not been verified.
+- Cloudflare Access JWT signature, issuer, audience, expiry and email-claim validation for `/admin` and `/api/v1/admin/*`.
+- A working admin dashboard page in source, with business list/search/status filtering, detail/history view, and registration-document-link update. The older checklist's statement that `/admin` is only a placeholder is stale and has been corrected separately.
+- Health, robots, sitemap, R2 background image routes and scheduled cleanup of expired temporary records/sessions/rate limits.
+- D1 migration `0001_mod01_account_business_traceability.sql` for accounts, businesses, memberships, registration requests, email-change requests, password-reset tokens, sessions, subscription history, events and rate limits.
 
-| Item | Value | Status / note |
-|---|---|---|
-| Repository | `sbizapp/sbiz` | GitHub repository |
-| Domain | `sbiz.app` | Owner-reported in infrastructure register |
-| Cloudflare Account ID | `7568b3c0e09d949e021c486fa8199b63` | Recorded from owner; not independently verified through Cloudflare API |
-| Zone ID | `e2b836a598a4e275aeaa000ece31bc28` | Recorded from owner; not independently verified through Cloudflare API |
-| Worker name | `sbiz` | From Wrangler config on source branch |
-| Workers.dev subdomain | `sbizapp.workers.dev` | Register entry; verify current routing in Dashboard |
-| D1 binding | `SBIZ_APP_DB` | Database `sbiz-app-db`, ID `8106266b-a132-4ccc-bce8-b386c027a8f7` |
-| KV binding | `SBIZ_APP_KV` | Namespace ID `f5c12871f3204a7588cd18b3dfca689a` |
-| R2 binding | `SBIZ_APP_R2` | Bucket `sbiz-app-assets`; register says keep private |
-| SMTP | `smtp.yandex.com:465` | Implicit TLS; delivery not runtime-verified |
-| SMTP username | `no-reply@sbiz.app` | Non-secret configuration |
-| SMTP secret name | `SMTP_PASSWORD_NOREPLY` | Secret value was not accessed or committed |
-| Cloudflare Access team | `icy-brook-9346.cloudflareaccess.com` | From Wrangler config; confirm in Access Dashboard |
-| Cron | `17 * * * *` | Scheduled cleanup, hourly at minute 17 |
-| Compatibility date | `2026-10-22` | From Wrangler config |
+## 2. Changes made in this audit pass
 
-## 3. Secrets and external APIs
-- GitHub source/configuration does not provide access to Cloudflare Dashboard secret values. Existence and validity of SMTP app passwords or any Cloudflare API token are not verified.
-- No Cloudflare API token, SMTP password, Paddle key, or webhook secret was copied into the Worker.
-- Current MODUL 01 source has no Paddle API integration. Do not infer billing is configured.
-- SMTP uses the Workers `cloudflare:sockets` API with implicit TLS. Actual delivery must be verified in the deployed runtime.
-- Cloudflare Access verifies JWTs against the configured team and audience. Admin paths fail closed when Access configuration or token verification fails. **Security condition:** the application code only checks that the Access email header was set after JWT verification; it does not independently compare that email against an owner allowlist. The Cloudflare Access application policy must restrict these routes to the owner's approved identity before deployment.
-- The Worker uses the D1, KV and R2 bindings as configured. The SQL migration remains separate and must be applied to the intended D1 database by the owner; consolidating source does not create tables.
+- Added `migrations/0002_mod01_business_slug_history.sql`. It creates slug-history records and backfills each existing business's current slug.
+- Updated registration completion to create an initial slug-history record for newly verified businesses.
+- Updated slug changes to close the previous current history row, append the new slug, and record actor/source in the event metadata.
+- Added `qa/mod01-slug-history-contract.test.mjs` and wired it into `npm run check` and `npm run test:slug-history`.
+- Fixed the admin detail panel so it is hidden until a business is selected.
+- Corrected the admin verification filter to include the actual `unverified` and `rejected` states.
 
-## 4. Scope limitations carried forward
-The existing deployment checklist records that the MODUL 01 scenario V1.6 is not fully implemented. In particular, subscription history ingestion, data-purging workflow, complete slug history/redirect behavior, fully translated UI, and a complete admin dashboard are not delivered by this consolidation. Do not claim MODUL 01 acceptance or production readiness.
+These are code and repository changes only. The new migration has **not** been applied to the remote D1 database.
 
-## 5. Verification and next action
-- GitHub source files were read and consolidated into `worker.js`; no Cloudflare resource or secret was changed.
-- Syntax/build and automated tests have **not yet been run** in this environment. This branch must not be marked PASS until checks are run against the consolidated file.
-- Before deployment, run a local syntax check and the existing Cloudflare Access tests; add or adapt tests for `/robots.txt` and `/sitemap.xml`. Review the full source, confirm D1 migration status and secrets, then manually paste/save/deploy from Cloudflare Dashboard.
-- After owner deployment, verify `/health`, `/robots.txt`, `/sitemap.xml`, normal account routes, protected admin routes, R2 image paths, scheduled cleanup, and a real SMTP delivery test.
+## 3. Current known gaps against MOD01 Part 1 V1.6
+
+1. **Language:** the five language choices are displayed, but the account pages and dashboard are still largely English-only; query-string selection does not implement translated/persistent language routing.
+2. **Slug history and redirects:** history storage is now implemented in code, subject to migration 0002. Public old-slug resolution/redirects are not implemented; there is not yet a complete public business-page resolver to redirect safely.
+3. **Custom domain:** Cloudflare for SaaS ownership/DNS verification, lifecycle states, attach/detach and collision checks are not implemented.
+4. **Product slug:** product IDs/slug history/redirect behavior are not implemented in this MOD01 Worker slice.
+5. **Subscription lifecycle:** the schema can store subscription history, but verified purchase/renewal/expiry ingestion and lifecycle state transitions are not implemented. Paddle integration is absent.
+6. **Data purge:** scheduled cleanup only removes expired temporary registrations, change/reset tokens, stale sessions and rate-limit records. It does not implement business operational-data purging or the required retained traceability policy.
+7. **Dashboard completeness:** the logged-in dashboard is a minimal session check, not the planned business control center with account/business status, subscription information, language status and links to product modules.
+8. **Admin authorization policy:** the Worker verifies the Access JWT, but it does not enforce a code-level owner-email allowlist. The Cloudflare Access application policy must restrict `/admin` and `/api/v1/admin/*` to the owner's approved identity/admin group. This policy has not been independently verified during this audit.
+9. **SMTP/runtime:** credentials are not in Git, which is correct, but secret presence/validity and real delivery are not verified.
+10. **Migration/runtime:** neither the new migration nor the current Worker has been deployed or verified against the live D1/runtime in this pass.
+
+## 4. Verification status
+
+- Source and configuration review: **performed**.
+- Slug-history migration and code hooks: **added; not executed against D1**.
+- Automated tests: **not run in this environment**. Do not treat the new contract tests or existing Access tests as PASS until run locally.
+- Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
+- Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
+
+## 5. Safe next execution order
+
+1. Run `npm install`, `npm run check`, `npm run test:slug-history`, and `npm run test:access` on this exact branch/HEAD; fix any failures.
+2. Review and apply migration 0002 to the intended D1 database only after the owner confirms the target and migration state. Do not deploy code that references `business_slug_history` before the table exists.
+3. Add behavioral D1 tests for registration/slug changes and race/failure cases.
+4. Implement the business dashboard from authoritative account/business data.
+5. Implement the remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion and retention/purge behavior.
+6. Owner verifies Cloudflare Access policy, secrets, bindings and live runtime. Deployment and remote migrations remain owner-controlled.
+
+No production deployment, remote migration, Cloudflare resource change, or workflow run was performed.
