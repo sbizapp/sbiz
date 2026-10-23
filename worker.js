@@ -892,6 +892,7 @@ async function verifyBusinessCustomDomain(request, env, businessId, domainId) {
   }
 
   const refreshed = await db.prepare("SELECT * FROM business_custom_domains WHERE domain_id=? AND business_id=?").bind(domainId, businessId).first();
+  if (!refreshed?.verified_at) return json({ error: "DNS_CHALLENGE_EXPIRED", message: "The DNS challenge expired before verification could be saved. Create a new request." }, 410);
   if (!refreshed.provider_hostname_id) {
     const provision = await cloudflareCustomHostname(env, "POST", refreshed.hostname, null);
     if (!provision.configured) return json({ error: "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED", message: "DNS ownership is verified, but Cloudflare for SaaS API credentials are not configured." }, 503);
