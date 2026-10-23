@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sbiz-app",
+  "name": "sbiz",
   "main": "worker.js",
   "compatibility_date": "2026-10-22",
   "preview_urls": false,
@@ -27,7 +27,9 @@
   "vars": {
     "SMTP_HOST": "smtp.yandex.com",
     "SMTP_PORT": "465",
-    "SMTP_USER_NOREPLY": "no-reply@sbiz.app"
+    "SMTP_USER_NOREPLY": "no-reply@sbiz.app",
+    "CF_ACCESS_TEAM_DOMAIN": "icy-brook-9346.cloudflareaccess.com",
+    "CF_ACCESS_AUD": "046996a2416371ba21fbc44bdea84b36d2383213e664de6274d41c19f0172e9c"
   },
   "triggers": {
     "crons": [
