@@ -296,6 +296,11 @@ test("Admin page follows the minimal white UI standard", async () => {
     assert.match(page, /--ui-shadow:0 1px 2px rgba\(0,0,0,.05\)/);
     assert.match(page, /background:#fff/);
     assert.match(page, /@media\(max-width:640px\)/);
+    assert.match(page, /button,\.button\{[^}]*background:#fff/);
+    assert.match(page, /input,select,textarea\{[^}]*background:#fff[^}]*border:1px solid #e5e7eb/);
+    assert.match(page, /table\{[^}]*background:#fff/);
+    assert.match(page, /th,td\{[^}]*background:#fff/);
+    assert.match(page, /button:focus-visible,\.button:focus-visible\{outline:2px solid #9ca3af/);
     assert.doesNotMatch(page, /backdrop-filter|--glass|linear-gradient|prefers-color-scheme:dark/);
     assert.doesNotMatch(page, /background[^;]*url\(["']?\/assets\/background-/);
   });
