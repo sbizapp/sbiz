@@ -61,7 +61,7 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 - `POST /api/v1/login`, `GET /api/v1/logout`, `GET /api/v1/me`.
 - `POST /api/v1/password/forgot`, `POST /api/v1/password/reset`.
 - `PATCH /api/v1/businesses/{business_id}/slug` — owner/admin slug update; short slugs (12 characters or fewer) require system admin.
-- `GET /api/v1/admin/businesses/{business_id}` — admin-only traceability record and event history.
+- `GET /api/v1/admin/businesses?limit=50` — admin-only list of business IDs and verification-document status.\n- `GET /api/v1/admin/businesses/{business_id}` — admin-only traceability record and event history.
 - `PATCH /api/v1/admin/businesses/{business_id}` — admin-only manual entry/update of the HTTPS business-registration document URL, recorded in event history.
 - `GET /health` — existing health check.
 
