@@ -123,6 +123,9 @@ function pageForPath(path, url) {
   if (path === "/verify") return html(page("Verify email and set password", `
     <p>Confirm your email by setting a password. The verification link expires after 30 minutes.</p><form id="form"><label>New password</label><input name="password" type="password" autocomplete="new-password" minlength="12" required><small>Use at least 12 characters.</small><button>Verify and create account</button><div id="message" role="status"></div></form>
     <script>const token=new URLSearchParams(location.search).get('token');document.querySelector('#form').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target);const r=await fetch('/api/v1/register/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,password:f.get('password')})});const d=await r.json();document.querySelector('#message').textContent=d.message||d.error||'Request completed';if(r.ok)setTimeout(()=>location.href='/login',1500);});if(!token)document.querySelector('#message').textContent='Verification link is missing.';</script>`));
+  if (path === "/change-email") return html(page("Confirm email change", `
+    <p>Confirm the new email address for your SBiz account.</p><form id="form"><button>Confirm email change</button><div id="message" role="status"></div></form>
+    <script>const token=new URLSearchParams(location.search).get('token');document.querySelector('#form').addEventListener('submit',async e=>{e.preventDefault();const r=await fetch('/api/v1/email/confirm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token})});const d=await r.json();document.querySelector('#message').textContent=d.message||d.error||'Request completed';});if(!token)document.querySelector('#message').textContent='Confirmation link is missing.';</script>`));
   if (path === "/forgot-password") return html(page("Forgot password", `
     <p>If the account is eligible, we will email a password reset link.</p><form id="form"><label>Account email</label><input name="email" type="email" autocomplete="email" required><button>Send reset link</button><div id="message" role="status"></div></form><a class="secondary" href="/login">Back to Login</a>
     <script>document.querySelector('#form').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target);const r=await fetch('/api/v1/password/forgot',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email')})});const d=await r.json();document.querySelector('#message').textContent=d.message||'If the account is eligible, a reset link will be sent.';});</script>`));
@@ -309,6 +312,66 @@ async function updateBusinessSlug(request, env, businessId) {
   return json({ ok: true, business_id: businessId, slug });
 }
 
+async function requestEmailChange(request, env, businessId) {
+  const account = await currentAccount(request, env);
+  if (!account) return json({ error: "UNAUTHENTICATED" }, 401);
+  const input = await bodyJson(request);
+  const newEmail = normalizeEmail(input?.newEmail);
+  if (!validEmail(newEmail)) return json({ error: "INVALID_EMAIL" }, 400);
+  if (newEmail === normalizeEmail(account.email)) return json({ error: "EMAIL_UNCHANGED" }, 400);
+  const db = env.SBIZ_APP_DB;
+  const membership = await db.prepare("SELECT role FROM business_memberships WHERE business_id=? AND account_id=?").bind(businessId, account.account_id).first();
+  if (!membership && !await isSystemAdmin(account, env)) return json({ error: "FORBIDDEN" }, 403);
+  const existing = await db.prepare("SELECT account_id FROM accounts WHERE email=? COLLATE NOCASE AND account_id<>?").bind(newEmail, account.account_id).first();
+  if (existing) return json({ error: "EMAIL_ALREADY_USED", message: "This email is already in use." }, 409);
+  const token = randomToken(32);
+  const changeId = uuid();
+  const now = new Date();
+  const created = now.toISOString();
+  const expires = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+  await db.prepare("DELETE FROM email_change_requests WHERE account_id=? AND business_id=?").bind(account.account_id, businessId).run();
+  await db.prepare("INSERT INTO email_change_requests (change_id,account_id,business_id,new_email,token_hash,created_at,expires_at) VALUES (?,?,?,?,?,?,?)")
+    .bind(changeId, account.account_id, businessId, newEmail, await sha256(token), created, expires).run();
+  const confirmUrl = new URL("/change-email?token=" + encodeURIComponent(token), request.url).toString();
+  try {
+    await sendMail(env, { to: newEmail, subject: "Confirm your new SBiz email", text: "Confirm this email address for your SBiz account within 30 minutes:\n\n" + confirmUrl + "\n\nIf you did not request this, ignore this email." });
+  } catch {
+    await db.prepare("DELETE FROM email_change_requests WHERE change_id=?").bind(changeId).run();
+    return json({ error: "EMAIL_SEND_FAILED", message: "We could not send the confirmation email. Your email has not changed." }, 503);
+  }
+  await event(db, businessId, "email_change_requested", account.account_id, account.email, newEmail);
+  return json({ ok: true, message: "Check the new email address to confirm the change within 30 minutes." }, 202);
+}
+
+async function confirmEmailChange(request, env) {
+  const input = await bodyJson(request);
+  const token = String(input?.token || "");
+  if (token.length < 32) return json({ error: "INVALID_TOKEN" }, 400);
+  const db = env.SBIZ_APP_DB;
+  const row = await db.prepare("SELECT * FROM email_change_requests WHERE token_hash=? AND used_at IS NULL AND expires_at>?").bind(await sha256(token), nowIso()).first();
+  if (!row) return json({ error: "TOKEN_EXPIRED", message: "This email confirmation link is invalid or expired." }, 410);
+  const existing = await db.prepare("SELECT account_id FROM accounts WHERE email=? COLLATE NOCASE AND account_id<>?").bind(row.new_email, row.account_id).first();
+  if (existing) return json({ error: "EMAIL_ALREADY_USED", message: "This email is already in use." }, 409);
+  const account = await db.prepare("SELECT email FROM accounts WHERE account_id=?").bind(row.account_id).first();
+  if (!account) return json({ error: "ACCOUNT_NOT_FOUND" }, 404);
+  const memberships = await db.prepare("SELECT business_id FROM business_memberships WHERE account_id=?").bind(row.account_id).all();
+  const now = nowIso();
+  const statements = [
+    db.prepare("UPDATE accounts SET email=?,email_verified_at=?,updated_at=? WHERE account_id=?").bind(row.new_email, now, now, row.account_id),
+    db.prepare("UPDATE email_change_requests SET used_at=? WHERE change_id=? AND used_at IS NULL").bind(now, row.change_id)
+  ];
+  for (const membership of memberships.results || []) {
+    statements.push(db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'email_changed',?,?,?,?)")
+      .bind(uuid(), membership.business_id, now, row.account_id, account.email, row.new_email));
+  }
+  try {
+    await db.batch(statements);
+  } catch {
+    return json({ error: "EMAIL_CHANGE_FAILED", message: "The email could not be changed. Please request a new confirmation link." }, 503);
+  }
+  return json({ ok: true, message: "Email updated. Use the new email for future logins." });
+}
+
 async function adminBusinessList(request, env) {
   const account = await currentAccount(request, env);
   if (!account) return json({ error: "UNAUTHENTICATED" }, 401);
@@ -358,7 +421,7 @@ export async function routeMod01(request, env) {
   if (path === "/api/v1/register" && request.method === "POST") return register(request, env);
   if (path === "/api/v1/register/verify" && request.method === "POST") return verifyRegistration(request, env);
   if (path === "/api/v1/login" && request.method === "POST") return login(request, env);
-  if (path === "/api/v1/password/forgot" && request.method === "POST") return forgotPassword(request, env);
+  if (path === "/api/v1/email/confirm" && request.method === "POST") return confirmEmailChange(request, env);\n  const emailChangeMatch = path.match(/^\\/api\\/v1\\/businesses\\/(sbiz-\\d{9})\\/email$/);\n  if (emailChangeMatch && request.method === "POST") return requestEmailChange(request, env, emailChangeMatch[1]);\n  if (path === "/api/v1/password/forgot" && request.method === "POST") return forgotPassword(request, env);
   if (path === "/api/v1/password/reset" && request.method === "POST") return resetPassword(request, env);
   if (path === "/api/v1/logout" && request.method === "GET") return logout(request, env);
   if (path === "/api/v1/me" && request.method === "GET") return me(request, env);
