@@ -272,3 +272,51 @@ test("valid registration verification atomically creates account, business, owne
   assert.equal(f.db.prepare("SELECT count(*) AS count FROM accounts").first().count, 1);
   assert.equal(f.db.prepare("SELECT count(*) AS count FROM businesses").first().count, 1);
 });
+
+test("password reset consumes a one-time token, changes the password hash and revokes all active sessions", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const token = "valid-password-reset-token-0123456789";
+  f.db.prepare("INSERT INTO password_reset_tokens (reset_id,account_id,token_hash,created_at,expires_at) VALUES (?,?,?,?,?)")
+    .bind("reset-1", "account-owner", await hashToken(token), now, future).run();
+
+  const response = await worker.fetch(publicJsonRequest("/api/v1/password/reset", {
+    token,
+    password: "AnotherLongPassword123!",
+  }), f.env, { waitUntil() {} });
+
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).ok, true);
+  const account = f.db.prepare("SELECT password_hash FROM accounts WHERE account_id=?").bind("account-owner").first();
+  assert.notEqual(account.password_hash, "not-used");
+  assert.ok(f.db.prepare("SELECT used_at FROM password_reset_tokens WHERE reset_id=?").bind("reset-1").first().used_at);
+  assert.ok(f.db.prepare("SELECT revoked_at FROM auth_sessions WHERE session_id=?").bind("session-1").first().revoked_at);
+
+  const replay = await worker.fetch(publicJsonRequest("/api/v1/password/reset", {
+    token,
+    password: "AnotherLongPassword123!",
+  }), f.env, { waitUntil() {} });
+  assert.equal(replay.status, 410);
+  assert.equal(f.db.prepare("SELECT password_hash FROM accounts WHERE account_id=?").bind("account-owner").first().password_hash, account.password_hash);
+});
+
+test("email-change confirmation updates the account, records events for memberships and rejects token replay", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const token = "valid-email-change-token-0123456789";
+  f.db.prepare("INSERT INTO email_change_requests (change_id,account_id,business_id,new_email,token_hash,created_at,expires_at) VALUES (?,?,?,?,?,?,?)")
+    .bind("email-change-1", "account-owner", "sbiz-000000001", "new-owner@example.test", await hashToken(token), now, future).run();
+
+  const response = await worker.fetch(publicJsonRequest("/api/v1/email/confirm", { token }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 200);
+  assert.equal(f.db.prepare("SELECT email FROM accounts WHERE account_id=?").bind("account-owner").first().email, "new-owner@example.test");
+  const event = f.db.prepare("SELECT event_type,old_value,new_value FROM business_events WHERE business_id=?").bind("sbiz-000000001").first();
+  assert.equal(event.event_type, "email_changed");
+  assert.equal(event.old_value, "owner@example.test");
+  assert.equal(event.new_value, "new-owner@example.test");
+
+  const replay = await worker.fetch(publicJsonRequest("/api/v1/email/confirm", { token }), f.env, { waitUntil() {} });
+  assert.equal(replay.status, 410);
+  assert.equal(f.db.prepare("SELECT email FROM accounts WHERE account_id=?").bind("account-owner").first().email, "new-owner@example.test");
+});
+
