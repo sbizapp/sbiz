@@ -119,7 +119,25 @@ Provide two themes:
 
 Theme selection and background selection are independent settings. Both themes must support the original default landscape background. Theme switching changes the component color tokens, not the user's selected background.
 
-## 5. Responsive and performance requirements
+## 5. Language choices and market flags
+
+The UI offers five languages: English, Vietnamese, Indonesian, Spanish, and Portuguese. Language identity and market targeting must be represented separately.
+
+Use these display labels and flag choices in the language selector:
+
+| UI language | Language code | Flag shown | Market intent |
+|---|---|---|---|
+| English | `en` | 🇬🇧 | English language option |
+| Tiếng Việt | `vi` | 🇻🇳 | Vietnamese language option |
+| Bahasa Indonesia | `id` | 🇮🇩 | Indonesian language option |
+| Español | `es` | 🇲🇽 | Prioritize the Mexican market for Spanish |
+| Português | `pt` | 🇧🇷 | Prioritize the Brazilian market for Portuguese |
+
+For Spanish, display the Mexican flag 🇲🇽 to emphasize the intended focus on Mexico and the wider Latin American market rather than Spain. For Portuguese, display the Brazilian flag 🇧🇷 to emphasize the intended focus on Brazil rather than Portugal.
+
+These flags are market-positioning cues in the UI, not a claim that Spanish is exclusive to Mexico or Portuguese is exclusive to Brazil. Keep the language codes `es` and `pt`; do not change them to country codes. Where technically feasible, use a flag icon asset or a reliable emoji presentation that renders consistently across supported devices.
+
+## 6. Responsive and performance requirements
 
 - Preserve the AppSheet-inspired principle of well-proportioned tables and controls on desktop, with carefully adapted layouts on mobile.
 - Do not shrink desktop tables proportionally onto mobile. Use responsive column priorities, horizontal scrolling only where appropriate, or mobile card/list layouts according to the table's purpose.
@@ -128,7 +146,7 @@ Theme selection and background selection are independent settings. Both themes m
 - Avoid heavy animation, continuous blur animation, and expensive visual effects.
 - Keep the image itself unmodified as the restorable default asset; any overlays are rendering layers, not edits to the original file.
 
-## 6. Acceptance criteria
+## 7. Acceptance criteria
 
 1. The original first concept is the default background direction.
 2. The original image asset is present in the repository before implementation is considered complete.
@@ -136,5 +154,6 @@ Theme selection and background selection are independent settings. Both themes m
 4. Light and dark themes use the exact tokens specified in this document.
 5. Glass opacity, border thickness, highlight thickness, highlight blur, backdrop blur, radii, shadows, and transition timing use the shared numeric values above.
 6. Modules do not invent their own Liquid Glass values.
-7. Tables, controls, and text remain readable on desktop and mobile.
-8. This document alone is not evidence that the image asset has been committed or the feature implemented.
+7. The language selector uses `es` with the Mexican flag and `pt` with the Brazilian flag, while retaining the correct language codes.
+8. Tables, controls, and text remain readable on desktop and mobile.
+9. This document alone is not evidence that the image asset has been committed or the feature implemented.
