@@ -115,6 +115,29 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_account ON auth_sessions(account_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON auth_sessions(expires_at);
 
+CREATE TABLE IF NOT EXISTS business_subscription_history (
+  subscription_record_id TEXT PRIMARY KEY,
+  business_id TEXT NOT NULL,
+  provider TEXT,
+  provider_reference TEXT,
+  plan_code TEXT NOT NULL,
+  term_years INTEGER CHECK (term_years IS NULL OR term_years IN (1, 2, 3)),
+  amount_minor_units INTEGER,
+  currency TEXT,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'active', 'expired', 'cancelled', 'payment_failed', 'refunded')),
+  purchased_at TEXT,
+  starts_at TEXT,
+  expires_at TEXT,
+  ended_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (business_id) REFERENCES businesses(business_id)
+);
+CREATE INDEX IF NOT EXISTS idx_business_subscription_history_business
+  ON business_subscription_history(business_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_business_subscription_history_expiry
+  ON business_subscription_history(status, expires_at);
+
 CREATE TABLE IF NOT EXISTS business_events (
   event_id TEXT PRIMARY KEY,
   business_id TEXT NOT NULL,
