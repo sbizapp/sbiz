@@ -3,9 +3,8 @@
 > **Current verification source (2026-10-23):** Root `worker.js` is the self-contained Worker source under the approved single-file workflow. The current branch being verified is `cleanup/repository-organization-2026-10-23`; the earlier `feature/mod01-single-file-worker` and `feature/mod01-cloudflare-access-admin` references describe prior source lineage. SQL migrations, `wrangler.jsonc`, QA files and product documents remain separate. No production deployment has been performed.
 
 **Current verification branch:** `cleanup/repository-organization-2026-10-23`  
-**Last fully tested HEAD:** `3aeb3c6496c0d095a9cd1f60b528d60e2ffd54a3`  
-**Last owner-run test result:** `npm test` passed all 30 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 6/6.  
-**New test code:** commit `e91bb4e6003138c01b8b933d178c1e1f1528eab1` adds four registration/verification behavior tests; they have not yet been run. Latest documentation commit: `d385060c7a751a8427e1b2eb6c318cba392077e9`. Pull the latest branch and rerun `npm test` before treating these additions as verified.  
+**Last owner-tested HEAD:** `3921c4bb8f1a6a484f1c7d1fe1d08e6ab785666f`  
+**Last owner-run test result:** `npm test` passed all 34 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 10/10. This includes the four registration/verification behavior tests from commit `e91bb4e6003138c01b8b933d178c1e1f1528eab1`. The experimental-loader deprecation warning did not fail tests.  
 **Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` has not been applied to remote D1. Live runtime/production parity remains unverified.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
