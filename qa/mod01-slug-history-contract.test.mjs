@@ -57,7 +57,7 @@ test("admin traceability exposes and renders immutable slug history", () => {
 test("admin traceability includes subscription history and custom domain provider state", () => {
   assert.match(worker, /SELECT provider,provider_reference,plan_code,term_years,amount_minor_units,currency,status,purchased_at,starts_at,expires_at,ended_at,created_at,updated_at FROM business_subscription_history/);
   assert.match(worker, /subscriptions: subscriptions\.results \|\| \[\]/);
-  assert.match(worker, /SELECT domain_id,hostname,status,verified_at,provider_status,ssl_status,last_provider_check_at,error_code,created_at,updated_at,removed_at FROM business_custom_domains/);
+  assert.match(worker, /SELECT domain_id,hostname,status,verified_at,provider_status,ssl_status,cname_target,routing_verified_at,last_provider_check_at,error_code,created_at,updated_at,removed_at FROM business_custom_domains/);
   assert.match(worker, /domains: domains\.results \|\| \[\]/);
   assert.match(worker, /id="subscription-history"/);
   assert.match(worker, /id="domain-history"/);
