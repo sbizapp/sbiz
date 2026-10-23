@@ -748,7 +748,7 @@ const json = (body, status = 404) => new Response(JSON.stringify(body), {
 async function routeRequest(request, env, ctx) {
   const url = new URL(request.url);
   if (url.pathname === "/assets/background-light.jpg" || url.pathname === "/assets/background-dark.jpg") {
-    if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "Method Not Allowed" }, 405);
+    if (request.method !== "GET" && request.method !== "HEAD") return routerJson({ error: "Method Not Allowed" }, 405);
     const key = url.pathname.slice(1);
     const object = await env.SBIZ_APP_R2.get(key);
     if (!object) return new Response("Not Found", { status: 404, headers: { "cache-control": "no-store" } });
@@ -765,11 +765,11 @@ async function routeRequest(request, env, ctx) {
   }
   if (url.pathname === "/health") {
     const response = handleHealth(request);
-    return response ?? json({ error: "Method Not Allowed" }, 405);
+    return response ?? routerJson({ error: "Method Not Allowed" }, 405);
   }
   const mod01Response = await routeMod01(request, env);
   if (mod01Response) return mod01Response;
-  return json({ error: "Not Found" }, 404);
+  return routerJson({ error: "Not Found" }, 404);
 }
 
 
