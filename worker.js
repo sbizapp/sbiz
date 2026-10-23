@@ -963,6 +963,12 @@ async function routeMod01(request, env) {
   if (path === "/api/v1/password/reset" && request.method === "POST") return resetPassword(request, env);
   if (path === "/api/v1/logout" && request.method === "GET") return logout(request, env);
   if (path === "/api/v1/me" && request.method === "GET") return me(request, env);
+  const domainsMatch = path.match(/^\/api\/v1\/businesses\/(sbiz-\d{9})\/domains$/);
+  if (domainsMatch && request.method === "GET") return listBusinessCustomDomains(request, env, domainsMatch[1]);
+  if (domainsMatch && request.method === "POST") return createBusinessCustomDomain(request, env, domainsMatch[1]);
+  const domainActionMatch = path.match(/^\/api\/v1\/businesses\/(sbiz-\d{9})\/domains\/([0-9a-f-]{36})(?:\/(verify))?$/i);
+  if (domainActionMatch && domainActionMatch[3] === "verify" && request.method === "POST") return verifyBusinessCustomDomain(request, env, domainActionMatch[1], domainActionMatch[2]);
+  if (domainActionMatch && !domainActionMatch[3] && request.method === "DELETE") return removeBusinessCustomDomain(request, env, domainActionMatch[1], domainActionMatch[2]);
   const slugMatch = path.match(/^\/api\/v1\/businesses\/(sbiz-\d{9})\/slug$/);
   if (slugMatch && request.method === "PATCH") return updateBusinessSlug(request, env, slugMatch[1]);
   const languageMatch = path.match(/^\/api\/v1\/businesses\/(sbiz-\d{9})\/language$/);
