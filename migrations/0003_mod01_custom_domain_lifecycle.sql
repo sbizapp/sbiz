@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS business_custom_domains (
   domain_id TEXT PRIMARY KEY,
   business_id TEXT NOT NULL,
-  hostname TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  hostname TEXT NOT NULL COLLATE NOCASE,
   status TEXT NOT NULL DEFAULT 'pending_dns'
     CHECK (status IN (
       'pending_dns',
@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS business_custom_domains (
   removed_at TEXT,
   FOREIGN KEY (business_id) REFERENCES businesses(business_id)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_business_custom_domains_live_hostname
+  ON business_custom_domains(hostname COLLATE NOCASE)
+  WHERE status <> 'removed';
 
 CREATE INDEX IF NOT EXISTS idx_business_custom_domains_business_status
   ON business_custom_domains(business_id, status, created_at);
