@@ -25,13 +25,14 @@
 - Fixed the admin detail panel so it is hidden until a business is selected.
 - Corrected the admin verification filter to include the actual `unverified` and `rejected` states.
 - Replaced the session-only dashboard with a responsive account/business overview that reads the authenticated email, business IDs, current slugs, L1, status, creation date and email-verification date from `/api/v1/me`.
+- Added owner-only `PATCH /api/v1/businesses/{business_id}/language` and a dashboard control to update L1 among the five supported languages; the change is recorded in `business_events`.
 - Added a unified `npm test` command for syntax checks, slug-history contract tests and Cloudflare Access tests.
 
 These are code and repository changes only. The new migration has **not** been applied to the remote D1 database.
 
 ## 3. Current known gaps against MOD01 Part 1 V1.6
 
-1. **Language:** the five language choices are displayed, but the account pages and dashboard are still largely English-only; query-string selection does not implement translated/persistent language routing.
+1. **Language:** changing a business's L1 is now implemented for its owner and recorded as an event. The account pages and dashboard are still largely English-only; query-string selection does not implement translated/persistent language routing.
 2. **Slug history and redirects:** history storage is now implemented in code, subject to migration 0002. Public old-slug resolution/redirects are not implemented; there is not yet a complete public business-page resolver to redirect safely.
 3. **Custom domain:** Cloudflare for SaaS ownership/DNS verification, lifecycle states, attach/detach and collision checks are not implemented.
 4. **Product slug:** product IDs/slug history/redirect behavior are not implemented in this MOD01 Worker slice.
