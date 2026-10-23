@@ -1,6 +1,6 @@
 # MODUL 01 — build and owner deployment checklist
 
-**Branch:** `feature/mod01-business-traceability`  
+**Branch:** `feature/mod01-cloudflare-access-admin`  
 **Status:** Source prepared; local checks and live Cloudflare deployment still required.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
@@ -8,9 +8,10 @@
 
 - `migrations/0001_mod01_account_business_traceability.sql` — D1 tables for accounts, businesses, memberships, pending registration/email-change/reset tokens, sessions, per-cycle subscription history, event history, and rate limiting.
 - `src/shared/smtp-mailer.js` — SMTP over Workers TCP sockets using implicit TLS on port 465.
+- `src/shared/cloudflare-access.js` — cryptographic Cloudflare Access JWT verification.
 - `src/modules/mod01.js` — minimal Create/Login/verification/password-reset pages and account/business traceability API.
 - `src/router.js` — route integration.
-- `wrangler.jsonc` — Worker name, existing D1/KV/R2 bindings, migration directory and non-secret SMTP/admin settings.
+- `wrangler.jsonc` — Worker name, existing D1/KV/R2 bindings, migration directory and non-secret SMTP settings.
 - `package.json` — Wrangler and basic syntax-check/migration scripts.
 
 ## Required secrets and bindings
@@ -42,6 +43,7 @@ From a clean checkout of this branch:
 ```bash
 npm install
 npm run check
+npm run test:access
 npx wrangler d1 migrations apply sbiz-app-db --remote
 ```
 
