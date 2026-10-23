@@ -79,3 +79,9 @@ test("custom domain schema enforces hostname uniqueness and verified active SSL 
   assert.match(customDomainMigration, /routing_verified_at TEXT/);
   assert.match(customDomainMigration, /WHERE status <> 'removed'/);
 });
+
+test("admin registration-document edits preserve actor email in the audit trail", () => {
+  assert.match(worker, /registration_document_link_updated/);
+  assert.match(worker, /JSON\.stringify\(\{ actorEmail: accessEmail \}\)/);
+  assert.match(worker, /business_verification_approved/);
+});
