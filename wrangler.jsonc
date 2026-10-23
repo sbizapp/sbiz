@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sbiz",
+  "name": "sbiz-app",
   "main": "worker.js",
   "compatibility_date": "2026-10-22",
   "preview_urls": false,
@@ -20,7 +20,14 @@
     {
       "binding": "SBIZ_APP_DB",
       "database_name": "sbiz-app-db",
-      "database_id": "8106266b-a132-4ccc-bce8-b386c027a8f7"
+      "database_id": "8106266b-a132-4ccc-bce8-b386c027a8f7",
+      "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "vars": {
+    "ADMIN_EMAIL": "admin@sbiz.app",
+    "SMTP_HOST": "smtp.yandex.com",
+    "SMTP_PORT": "465",
+    "SMTP_USER_NOREPLY": "no-reply@sbiz.app"
+  }
 }
