@@ -520,7 +520,12 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     }
     if (url.includes("/custom_hostnames")) {
       providerCalls++;
-      assert.equal(init.method, "POST");
+      if (init.method === "POST") {
+        return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "pending_validation", ssl: { status: "pending_issuance" } } }), {
+          status: 200, headers: { "content-type": "application/json" }
+        });
+      }
+      assert.equal(init.method, "GET");
       return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "active", ssl: { status: "active" } } }), {
         status: 200, headers: { "content-type": "application/json" }
       });
@@ -531,12 +536,22 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     const response = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
       method: "POST", body: {}
     }), { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" }, { waitUntil() {} });
-    assert.equal(response.status, 200);
-    const body = await response.json();
+    assert.equal(response.status, 202);
+    const pending = await response.json();
+    assert.equal(pending.status, "pending_validation");
+    assert.equal(pending.provider_status, "pending_validation");
+    assert.equal(pending.ssl_status, "pending_issuance");
+    assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get().status, "pending_validation");
+
+    const activated = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
+      method: "POST", body: {}
+    }), { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" }, { waitUntil() {} });
+    assert.equal(activated.status, 200);
+    const body = await activated.json();
     assert.equal(body.status, "active");
     assert.equal(body.provider_status, "active");
     assert.equal(body.ssl_status, "active");
-    assert.equal(providerCalls, 1);
+    assert.equal(providerCalls, 2);
     const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
     assert.equal(saved.status, "active");
     assert.equal(saved.provider_hostname_id, "cf-hostname-1");
