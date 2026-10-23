@@ -313,7 +313,7 @@ test("Admin page follows the minimal white UI standard", async () => {
 });
 
 test("all public account pages use the same minimal white typography and surfaces", async () => {
-  for (const path of ["/", "/create", "/login", "/verify", "/change-email", "/forgot-password", "/reset-password"]) {
+  for (const path of ["/", "/create", "/login", "/verify", "/change-email", "/forgot-password", "/reset-password", "/dashboard"]) {
     const response = await worker.fetch(
       new Request("https://sbiz.app" + path),
       {},
