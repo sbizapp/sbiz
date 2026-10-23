@@ -59,9 +59,12 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 - `POST /api/v1/register` — validates email, 13–32 character slug and default language; creates a temporary request and sends verification email.
 - `POST /api/v1/register/verify` — validates a 30-minute one-time token, accepts the password on the verification page, then creates account, business ID, owner membership and audit events.
 - `POST /api/v1/login`, `GET /api/v1/logout`, `GET /api/v1/me`.
-- `POST /api/v1/password/forgot`, `POST /api/v1/password/reset`.\n- `POST /api/v1/businesses/{business_id}/email` and `POST /api/v1/email/confirm` — email-change request and confirmation to the new email.\n- Hourly scheduled cleanup for expired pending registrations, email-change requests, password-reset tokens, stale sessions and old rate-limit records.
+- `POST /api/v1/password/forgot`, `POST /api/v1/password/reset`.
+- `POST /api/v1/businesses/{business_id}/email` and `POST /api/v1/email/confirm` — email-change request and confirmation to the new email.
+- Hourly scheduled cleanup for expired pending registrations, email-change requests, password-reset tokens, stale sessions and old rate-limit records.
 - `PATCH /api/v1/businesses/{business_id}/slug` — owner/admin slug update; short slugs (12 characters or fewer) require system admin.
-- `GET /api/v1/admin/businesses?limit=50` — admin-only list of business IDs and verification-document status.\n- `GET /api/v1/admin/businesses/{business_id}` — admin-only traceability record and event history.
+- `GET /api/v1/admin/businesses?limit=50` — admin-only list of business IDs and verification-document status.
+- `GET /api/v1/admin/businesses/{business_id}` — admin-only traceability record and event history.
 - `PATCH /api/v1/admin/businesses/{business_id}` — admin-only manual entry/update of the HTTPS business-registration document URL, recorded in event history.
 - `GET /health` — existing health check.
 
@@ -70,7 +73,7 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 1. The current first-pass UI uses English copy. The five language links are visible, but full translated UI strings and language-persistent routing are not yet implemented.
 2. The admin document URL API is implemented; a complete admin dashboard/navigation is not.
 3. Email sending uses Workers TCP sockets to Yandex SMTP. It must be tested in the actual Worker runtime with the secret configured. Do not assume SMTP works until a real test message is received and logs are checked.
-4. Email-change verification, automated expired-registration cleanup, scheduled deletion of business data, subscription event ingestion, and a complete product slug history/redirect resolver are not implemented in this first source slice.
+4. Email-change verification and hourly cleanup of temporary tokens are implemented. Scheduled deletion of business data, subscription event ingestion, and a complete product slug history/redirect resolver are not implemented in this first source slice.
 5. The SQL schema stores subscription timestamps and data-deletion timestamp, and records business events, but subscription billing and data purging are not implemented here.
 6. The admin is identified by the verified account matching `ADMIN_EMAIL`. Ensure that email is owner-controlled before enabling this feature.
 7. No claim of production readiness, deployment success, or passing tests is made until checks and owner-side runtime verification are completed.
@@ -79,7 +82,8 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 
 1. Open `/health` and confirm HTTP 200.
 2. Open `/`, `/create`, and `/login`.
-3. Confirm the Worker Cron Trigger is present (hourly at minute 17).\n4. Submit a test registration using a controlled mailbox and a valid unique slug.
+3. Confirm the Worker Cron Trigger is present (hourly at minute 17).
+4. Submit a test registration using a controlled mailbox and a valid unique slug.
 5. Confirm the email arrives, open the link within 30 minutes, set a password, and verify the account/business rows in D1.
 6. Test duplicate email, duplicate slug, invalid slug, expired token, failed SMTP, wrong password, forgot-password neutral response, and one-time reset-token behavior.
 7. Verify admin-only access to the business traceability record and document URL update.
