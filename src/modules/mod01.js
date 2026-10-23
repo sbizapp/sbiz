@@ -381,7 +381,7 @@ async function adminBusinessList(request, env) {
   const url = new URL(request.url);
   const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") || 50)));
   const result = await env.SBIZ_APP_DB.prepare(
-    "SELECT business_id,current_slug,account_id,default_language,created_at,verified_at,registration_document_url,admin_verified_at,status FROM businesses ORDER BY created_at DESC LIMIT ?"
+    "SELECT business_id,current_slug,account_id,default_language,created_at,verified_at,registration_document_url,verification_status,admin_verified_at,status FROM businesses ORDER BY created_at DESC LIMIT ?"
   ).bind(limit).all();
   return json({ businesses: result.results || [] });
 }
@@ -392,7 +392,7 @@ async function adminBusiness(request, env, businessId) {
   if (!await isSystemAdmin(account, env)) return json({ error: "ADMIN_REQUIRED" }, 403);
   const db = env.SBIZ_APP_DB;
   if (request.method === "GET") {
-    const business = await db.prepare("SELECT business_id,current_slug,account_id,default_language,created_at,verified_at,subscription_started_at,subscription_expires_at,data_deleted_at,registration_document_url,admin_verified_at,status FROM businesses WHERE business_id=?").bind(businessId).first();
+    const business = await db.prepare("SELECT business_id,current_slug,account_id,default_language,created_at,verified_at,subscription_started_at,subscription_expires_at,data_deleted_at,registration_document_url,verification_status,admin_verified_at,status FROM businesses WHERE business_id=?").bind(businessId).first();
     if (!business) return json({ error: "NOT_FOUND" }, 404);
     const history = await db.prepare("SELECT event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json FROM business_events WHERE business_id=? ORDER BY occurred_at DESC LIMIT 200").bind(businessId).all();
     return json({ business, history: history.results || [] });
@@ -403,14 +403,15 @@ async function adminBusiness(request, env, businessId) {
     let parsed;
     try { parsed = new URL(rawUrl); } catch { return json({ error: "INVALID_DOCUMENT_URL" }, 400); }
     if (parsed.protocol !== "https:" || parsed.username || parsed.password || rawUrl.length > 2048) return json({ error: "INVALID_DOCUMENT_URL", message: "Provide a valid HTTPS document link." }, 400);
-    const old = await db.prepare("SELECT registration_document_url FROM businesses WHERE business_id=?").bind(businessId).first();
+    const old = await db.prepare("SELECT registration_document_url,verification_status FROM businesses WHERE business_id=?").bind(businessId).first();
     if (!old) return json({ error: "NOT_FOUND" }, 404);
     const now = nowIso();
     await db.batch([
-      db.prepare("UPDATE businesses SET registration_document_url=?,admin_verified_at=? WHERE business_id=?").bind(rawUrl, now, businessId),
-      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'registration_document_link_updated',?,?,?,?)").bind(uuid(), businessId, now, account.account_id, old.registration_document_url, rawUrl)
+      db.prepare("UPDATE businesses SET registration_document_url=?,verification_status='verified',admin_verified_at=? WHERE business_id=?").bind(rawUrl, now, businessId),
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'registration_document_link_updated',?,?,?,?)").bind(uuid(), businessId, now, account.account_id, old.registration_document_url, rawUrl),
+      db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?,?, 'business_verification_approved',?,?,?,? ,?)").bind(uuid(), businessId, now, account.account_id, old.verification_status, "verified", JSON.stringify({ documentUrl: rawUrl }))
     ]);
-    return json({ ok: true, business_id: businessId, registration_document_url: rawUrl, admin_verified_at: now });
+    return json({ ok: true, business_id: businessId, registration_document_url: rawUrl, verification_status: "verified", admin_verified_at: now });
   }
   return json({ error: "METHOD_NOT_ALLOWED" }, 405);
 }
