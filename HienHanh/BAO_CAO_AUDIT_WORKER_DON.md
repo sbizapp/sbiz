@@ -45,7 +45,7 @@ These are code and repository changes only. The new migration has **not** been a
 ## 4. Verification status
 
 - Source and configuration review: **performed**.
-- Slug-history migration and code hooks: **added; not executed against D1**.
+- Slug-history migration and code hooks: **added; migration/backfill and update SQL shape smoke-tested against a minimal local SQLite schema; not executed against D1**.
 - Automated tests: **not run in this environment**. Do not treat the new contract tests or existing Access tests as PASS until run locally.
 - Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
 - Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
