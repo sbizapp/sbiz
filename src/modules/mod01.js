@@ -105,7 +105,12 @@ function page(title, content) {
   :root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#182230;background:#e9edf3}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(140deg,#e8eef6,#cbd9eb 55%,#f4d8bd)}main{width:min(100%,440px);padding:28px;border:1px solid rgba(255,255,255,.8);border-radius:20px;background:rgba(255,255,255,.78);backdrop-filter:blur(16px);box-shadow:0 8px 24px rgba(31,45,66,.12)}h1{font-size:1.5rem;margin:0 0 8px}p{line-height:1.5;color:#526174}label{display:block;font-size:.9rem;font-weight:600;margin:16px 0 6px}input,select{width:100%;padding:12px;border:1px solid #c8d1df;border-radius:10px;font:inherit;background:#fff}button,a.button{display:block;width:100%;margin-top:16px;padding:12px;border:0;border-radius:10px;background:#1677f2;color:#fff;font:inherit;font-weight:650;text-align:center;text-decoration:none;cursor:pointer}a.secondary{display:block;text-align:center;margin-top:16px;color:#245ea8}#message{white-space:pre-wrap;margin-top:14px;color:#8b2635}small{color:#526174}</style></head><body><main><h1>${title}</h1>${content}</main></body></html>`;
 }
 function pageForPath(path, url) {
-  if (path === "/" || path === "/create") return html(page("Create your SBiz account", `
+  if (path === "/") return html(page("SBiz — Smart Business", `
+    <p>Create a business account or sign in to manage your business.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><a class="button" href="/create">Create</a><a class="button" href="/login" style="background:#334155">Login</a></div>
+    <p style="margin-top:24px">Choose language</p><nav style="display:flex;gap:10px;flex-wrap:wrap"><a href="/?lang=en">English 🇺🇸</a><a href="/?lang=vi">Tiếng Việt 🇻🇳</a><a href="/?lang=id">Bahasa Indonesia 🇮🇩</a><a href="/?lang=es">Español 🇲🇽</a><a href="/?lang=pt">Português 🇧🇷</a></nav>
+  `));
+  if (path === "/create") return html(page("Create your SBiz account", `
     <p>Create a business account. Email verification is required within 30 minutes.</p>
     <form id="form"><label>Email</label><input name="email" type="email" autocomplete="email" required maxlength="254">
     <label>Business slug</label><input name="slug" required minlength="13" maxlength="32" pattern="[a-z0-9]+" autocomplete="off"><small>13–32 lowercase letters or numbers.</small>
