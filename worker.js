@@ -173,7 +173,7 @@ async function verifySignature(parts, teamDomain) {
   );
 }
 
-async function verifyCloudflareAccess(request, env) {
+export async function verifyCloudflareAccess(request, env) {
   const config = accessConfig(env);
   if (!config) return { ok: false, status: 503, error: "CLOUDFLARE_ACCESS_NOT_CONFIGURED" };
 
