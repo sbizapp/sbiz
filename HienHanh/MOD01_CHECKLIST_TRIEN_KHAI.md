@@ -3,9 +3,8 @@
 > **Current verification source (2026-10-23):** Root `worker.js` is the self-contained Worker source under the approved single-file workflow. The current branch being verified is `cleanup/repository-organization-2026-10-23`; the earlier `feature/mod01-single-file-worker` and `feature/mod01-cloudflare-access-admin` references describe prior source lineage. SQL migrations, `wrangler.jsonc`, QA files and product documents remain separate. No production deployment has been performed.
 
 **Current verification branch:** `cleanup/repository-organization-2026-10-23`  
-**Last owner-tested HEAD:** `153ece4889d0d13eb9340f79cd84fa7ceb708b7f`  
-**Last owner-run test result:** `npm test` passed all 36 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 12/12. This includes registration/verification, password-reset/session revocation, and email-change confirmation/replay behavior tests. The experimental-loader deprecation warning did not fail tests.  
-**New pending test:** commit `a4f7e619fb557f723a988c4235d74dc815a53758` adds a test that business ID capacity exhaustion creates no partial records and preserves the pending request. This has not been run; prior 36/36 PASS does not include it.  
+**Last owner-tested HEAD:** `a94ea8405756499da30c9c00d1502a542c0ffc6f`  
+**Last owner-run test result:** `npm test` passed all 37 tests: syntax checks, slug-history 7/7, Cloudflare Access 17/17, and SQLite-backed D1 behavior 13/13. This includes registration/verification, password-reset/session revocation, email-change confirmation/replay, and business-ID capacity exhaustion. The capacity test confirms `503 BUSINESS_ID_CAPACITY_REACHED`, no partial account/business records, retained pending request and unchanged sequence. Node experimental-loader warnings did not fail tests.  
 **Remote migration status:** `migrations/0002_mod01_business_slug_history.sql` has not been applied to remote D1. Live runtime/production parity remains unverified.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
