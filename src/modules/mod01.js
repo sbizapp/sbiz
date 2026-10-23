@@ -421,7 +421,10 @@ export async function routeMod01(request, env) {
   if (path === "/api/v1/register" && request.method === "POST") return register(request, env);
   if (path === "/api/v1/register/verify" && request.method === "POST") return verifyRegistration(request, env);
   if (path === "/api/v1/login" && request.method === "POST") return login(request, env);
-  if (path === "/api/v1/email/confirm" && request.method === "POST") return confirmEmailChange(request, env);\n  const emailChangeMatch = path.match(/^\\/api\\/v1\\/businesses\\/(sbiz-\\d{9})\\/email$/);\n  if (emailChangeMatch && request.method === "POST") return requestEmailChange(request, env, emailChangeMatch[1]);\n  if (path === "/api/v1/password/forgot" && request.method === "POST") return forgotPassword(request, env);
+  if (path === "/api/v1/email/confirm" && request.method === "POST") return confirmEmailChange(request, env);
+  const emailChangeMatch = path.match(/^\/api\/v1\/businesses\/(sbiz-\d{9})\/email$/);
+  if (emailChangeMatch && request.method === "POST") return requestEmailChange(request, env, emailChangeMatch[1]);
+  if (path === "/api/v1/password/forgot" && request.method === "POST") return forgotPassword(request, env);
   if (path === "/api/v1/password/reset" && request.method === "POST") return resetPassword(request, env);
   if (path === "/api/v1/logout" && request.method === "GET") return logout(request, env);
   if (path === "/api/v1/me" && request.method === "GET") return me(request, env);
