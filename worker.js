@@ -668,33 +668,39 @@ async function confirmEmailChange(request, env) {
   const token = String(input?.token || "");
   if (token.length < 32) return json({ error: "INVALID_TOKEN" }, 400);
   const db = env.SBIZ_APP_DB;
-  const row = await db.prepare("SELECT * FROM email_change_requests WHERE token_hash=? AND used_at IS NULL AND expires_at>?").bind(await sha256(token), nowIso()).first();
+  const now = nowIso();
+  const row = await db.prepare("SELECT * FROM email_change_requests WHERE token_hash=? AND used_at IS NULL AND expires_at>?").bind(await sha256(token), now).first();
   if (!row) return json({ error: "TOKEN_EXPIRED", message: "This email confirmation link is invalid or expired." }, 410);
   const existing = await db.prepare("SELECT account_id FROM accounts WHERE email=? COLLATE NOCASE AND account_id<>?").bind(row.new_email, row.account_id).first();
   if (existing) return json({ error: "EMAIL_ALREADY_USED", message: "This email is already in use." }, 409);
   const account = await db.prepare("SELECT email FROM accounts WHERE account_id=?").bind(row.account_id).first();
   if (!account) return json({ error: "ACCOUNT_NOT_FOUND" }, 404);
-  const memberships = await db.prepare("SELECT business_id FROM business_memberships WHERE account_id=?").bind(row.account_id).all();
-  const now = nowIso();
-  const consumed = await db.prepare("UPDATE email_change_requests SET used_at=? WHERE change_id=? AND used_at IS NULL AND expires_at>? RETURNING change_id")
-    .bind(now, row.change_id, now).first();
-  if (!consumed) return json({ error: "TOKEN_EXPIRED", message: "This email confirmation link has already been used or expired." }, 410);
+  const usedAt = uniqueTimestamp();
   const statements = [
-    db.prepare("UPDATE accounts SET email=?,email_verified_at=?,updated_at=? WHERE account_id=?").bind(row.new_email, now, now, row.account_id),
-    db.prepare("UPDATE email_change_requests SET used_at=? WHERE account_id=? AND used_at IS NULL").bind(now, row.account_id)
+    db.prepare("UPDATE accounts SET email=?,email_verified_at=?,updated_at=? WHERE account_id=? AND EXISTS (SELECT 1 FROM email_change_requests WHERE change_id=? AND used_at IS NULL AND expires_at>?)")
+      .bind(row.new_email, now, now, row.account_id, row.change_id, now),
+    db.prepare("UPDATE email_change_requests SET used_at=? WHERE change_id=? AND used_at IS NULL AND expires_at>? AND EXISTS (SELECT 1 FROM accounts WHERE account_id=? AND email=?)")
+      .bind(usedAt, row.change_id, now, row.account_id, row.new_email),
+    db.prepare("UPDATE email_change_requests SET used_at=? WHERE account_id=? AND change_id<>? AND used_at IS NULL AND EXISTS (SELECT 1 FROM email_change_requests WHERE change_id=? AND used_at=?)")
+      .bind(now, row.account_id, row.change_id, row.change_id, usedAt)
   ];
+  const memberships = await db.prepare("SELECT business_id FROM business_memberships WHERE account_id=?").bind(row.account_id).all();
   for (const membership of memberships.results || []) {
-    statements.push(db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'email_changed',?,?,?,?)")
-      .bind(uuid(), membership.business_id, now, row.account_id, account.email, row.new_email));
+    statements.push(db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) SELECT ?, ?, 'email_changed', ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM email_change_requests WHERE change_id=? AND used_at=?)")
+      .bind(uuid(), membership.business_id, now, row.account_id, account.email, row.new_email, row.change_id, usedAt));
   }
   try {
     await db.batch(statements);
   } catch {
     return json({ error: "EMAIL_CHANGE_FAILED", message: "The email could not be changed. Please request a new confirmation link." }, 503);
   }
+  const result = await db.prepare("SELECT a.email,r.used_at FROM accounts a JOIN email_change_requests r ON r.account_id=a.account_id WHERE a.account_id=? AND r.change_id=?")
+    .bind(row.account_id, row.change_id).first();
+  if (!result || result.email !== row.new_email || result.used_at !== usedAt) {
+    return json({ error: "TOKEN_EXPIRED", message: "This email confirmation link has already been used or expired." }, 410);
+  }
   return json({ ok: true, message: "Email updated. Use the new email for future logins." });
 }
-
 async function adminBusinessList(request, env) {
   const accessEmail = request.headers.get("x-sbiz-verified-access-email");
   if (!accessEmail) return json({ error: "CLOUDFLARE_ACCESS_REQUIRED" }, 401);
