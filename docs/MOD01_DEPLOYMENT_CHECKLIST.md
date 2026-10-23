@@ -1,6 +1,9 @@
 # MODUL 01 — build and owner deployment checklist
 
-**Branch:** `feature/mod01-cloudflare-access-admin`  
+> **Single-file update (2026-10-23):** The canonical deployment source for the owner Dashboard workflow is now root `worker.js` on `feature/mod01-single-file-worker`. The earlier `src/...` file list below is historical context from the modular implementation and is superseded; those runtime source files have been consolidated and removed from this branch. The D1 migration, `wrangler.jsonc`, QA files, and documentation remain separate. No production deployment has been performed.
+
+**Canonical handoff branch:** `feature/mod01-single-file-worker`  
+**Prior modular branch:** `feature/mod01-cloudflare-access-admin`  
 **Status (2026-10-23):** Source and Access tests exist on this branch. Production Worker is named `sbiz`; live Access redirect was observed, but current production routes returned `Not Found`, so the deployed code has not yet been proven to match this branch. Owner-controlled redeployment and runtime verification are still required.  
 **Production deployment is owner-controlled.** Do not run `wrangler deploy` until the owner has reviewed the changes and chosen to deploy.
 
