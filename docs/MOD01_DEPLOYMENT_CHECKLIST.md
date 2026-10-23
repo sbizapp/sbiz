@@ -28,9 +28,12 @@ The code expects:
 - `SMTP_PORT=465`
 - `SMTP_USER_NOREPLY=no-reply@sbiz.app`
 - Secret `SMTP_PASSWORD_NOREPLY`
-- `ADMIN_EMAIL=admin@sbiz.app`
+- `CF_ACCESS_TEAM_DOMAIN=<your-team>.cloudflareaccess.com`
+- `CF_ACCESS_AUD=<Access application AUD tag>`
 
-The configured admin email must correspond to a verified account. Do not configure an admin address that is not controlled by the owner.
+These two non-secret Worker vars are required by the Worker to validate Cloudflare Access JWTs. Add their actual values to `wrangler.jsonc` only after creating the Access self-hosted application. The Worker fails closed (503) for protected admin routes until both values are configured.
+
+System administration is authorized by Cloudflare Access, not by a special SBiz account email or password. Configure a Cloudflare Access self-hosted application for `sbiz.app` and restrict it to the owner's approved identity (or an explicitly approved admin group). Protect both `/admin` and `/api/v1/admin/*`. The Worker independently verifies the `Cf-Access-Jwt-Assertion` signature, issuer, audience, expiry, and email claim. Do not rely on an email header supplied by the browser.
 
 ## Owner-run preparation
 
@@ -63,9 +66,10 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 - `POST /api/v1/businesses/{business_id}/email` and `POST /api/v1/email/confirm` — email-change request and confirmation to the new email.
 - Hourly scheduled cleanup for expired pending registrations, email-change requests, password-reset tokens, stale sessions and old rate-limit records.
 - `PATCH /api/v1/businesses/{business_id}/slug` — owner/admin slug update; short slugs (12 characters or fewer) require system admin.
-- `GET /api/v1/admin/businesses?limit=50` — admin-only list of business IDs and verification-document status.
-- `GET /api/v1/admin/businesses/{business_id}` — admin-only traceability record and event history.
-- `PATCH /api/v1/admin/businesses/{business_id}` — admin-only manual entry/update of the HTTPS business-registration document URL; this action marks the business verified and records both document-link and approval events.
+- `GET /admin` — protected by Cloudflare Access; currently a placeholder, not a complete admin dashboard.
+- `GET /api/v1/admin/businesses?limit=50` — Cloudflare Access-only list of business IDs and verification-document status.
+- `GET /api/v1/admin/businesses/{business_id}` — Cloudflare Access-only traceability record and event history.
+- `PATCH /api/v1/admin/businesses/{business_id}` — Cloudflare Access-only manual entry/update of the HTTPS business-registration document URL; this action marks the business verified and records document-link and approval events. Audit records identify the Access email in event metadata; no SBiz admin account is required.
 - `GET /health` — existing health check.
 
 ## Important known limits before production
@@ -75,7 +79,7 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 3. Email sending uses Workers TCP sockets to Yandex SMTP. It must be tested in the actual Worker runtime with the secret configured. Do not assume SMTP works until a real test message is received and logs are checked.
 4. Email-change verification and hourly cleanup of temporary tokens are implemented. Scheduled deletion of business data, subscription event ingestion, and a complete product slug history/redirect resolver are not implemented in this first source slice.
 5. The SQL schema stores subscription timestamps and data-deletion timestamp, and records business events, but subscription billing and data purging are not implemented here.
-6. The admin is identified by the verified account matching `ADMIN_EMAIL`. Ensure that email is owner-controlled before enabling this feature.
+6. Admin authorization depends on a correctly configured Cloudflare Access application, an owner-approved Access policy, and the matching `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` Worker vars. Do not treat the `/admin` placeholder as a complete dashboard.
 7. No claim of production readiness, deployment success, or passing tests is made until checks and owner-side runtime verification are completed.
 
 ## Post-deploy verification
@@ -86,5 +90,6 @@ The owner must run deployment. The builder does not deploy or trigger workflows.
 4. Submit a test registration using a controlled mailbox and a valid unique slug.
 5. Confirm the email arrives, open the link within 30 minutes, set a password, and verify the account/business rows in D1.
 6. Test duplicate email, duplicate slug, invalid slug, expired token, failed SMTP, wrong password, forgot-password neutral response, and one-time reset-token behavior.
-7. Verify admin-only access to the business traceability record and document URL update.
-8. Verify event rows retain business creation, email verification, email changes, admin document-link changes and verification approval.
+7. Verify `/admin` and every `/api/v1/admin/*` endpoint are blocked without a valid Access JWT and work only with a valid JWT from the intended Access application. Test wrong issuer, wrong audience, expired token, and forged `x-sbiz-verified-access-email` header.
+8. Verify Access-authorized access to the business traceability record and document URL update.
+9. Verify event rows retain business creation, email verification, email changes, admin document-link changes and verification approval.
