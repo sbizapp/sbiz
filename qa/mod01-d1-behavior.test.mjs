@@ -511,10 +511,11 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
   const token = challenge.dns.value.slice("sbiz-domain-verification=".length);
   const originalFetch = globalThis.fetch;
   let providerCalls = 0;
+  let cnameCalls = 0;
   globalThis.fetch = async (input, init = {}) => {
     const url = String(input);
     if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
-      if (url.includes("type=CNAME")) return new Response(JSON.stringify({ Answer: [{ type: 5, data: "fallback.saas.example.net." }] }), { status: 200 });
+      if (url.includes("type=CNAME")) { cnameCalls++; return new Response(JSON.stringify({ Answer: [{ type: 5, data: cnameCalls === 1 ? "wrong.saas.example.net." : "fallback.saas.example.net." }] }), { status: 200 }); }
       return new Response(JSON.stringify({ Answer: [{ type: 16, data: '"sbiz-domain-verification=' + token + '"' }] }), {
         status: 200, headers: { "content-type": "application/dns-json" }
       });
@@ -548,6 +549,15 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     assert.equal(pending.ssl_status, "pending_issuance");
     assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get().status, "pending_validation");
 
+    const routingPending = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
+      method: "POST", body: {}
+    }), { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" }, { waitUntil() {} });
+    assert.equal(routingPending.status, 202);
+    assert.equal((await routingPending.json()).status, "pending_deployment");
+    const notYetActive = f.db.prepare("SELECT status,routing_verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    assert.equal(notYetActive.status, "pending_deployment");
+    assert.equal(notYetActive.routing_verified_at, null);
+
     const activated = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
       method: "POST", body: {}
     }), { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" }, { waitUntil() {} });
@@ -556,11 +566,13 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     assert.equal(body.status, "active");
     assert.equal(body.provider_status, "active");
     assert.equal(body.ssl_status, "active");
-    assert.equal(providerCalls, 2);
-    const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    assert.equal(providerCalls, 3);
+    assert.equal(cnameCalls, 2);
+    const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at,routing_verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
     assert.equal(saved.status, "active");
     assert.equal(saved.provider_hostname_id, "cf-hostname-1");
     assert.ok(saved.verified_at);
+    assert.ok(saved.routing_verified_at);
   } finally {
     globalThis.fetch = originalFetch;
   }
