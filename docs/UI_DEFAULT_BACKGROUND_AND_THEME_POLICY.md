@@ -10,7 +10,8 @@ Every visible UI object uses a plain white background `#ffffff`, a thin light-gr
 - Surface background: `#ffffff` for every component, including page-level surfaces, panels, cards, forms, inputs, tables, navigation, dialogs, dropdowns, and buttons.
 - Border: 1 px solid light gray, baseline `#e5e7eb`.
 - Shadow: optional and restrained, baseline `0 1px 2px rgba(0,0,0,0.05)`; do not stack shadows.
-- Font family: `Roboto, Arial, sans-serif`, with a normal sans-serif fallback.\n- Use regular (400) body text and medium (500) headings and controls; avoid heavy typography.\n- Main text: `#111827`.
+- Font family: `Roboto, Arial, sans-serif`, with a normal sans-serif fallback.
+- Use regular (400) body text and medium (500) headings and controls; avoid heavy typography.\n- Main text: `#111827`.
 - Secondary text: `#6b7280`.
 - Dividers: `#e5e7eb`.
 - Corner radius: restrained and consistent; default 6 px for controls and 8 px for panels.
