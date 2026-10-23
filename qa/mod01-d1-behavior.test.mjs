@@ -574,3 +574,33 @@ test("DNS verification without Cloudflare for SaaS configuration never marks a h
     globalThis.fetch = originalFetch;
   }
 });
+
+test("custom domain can be removed before provider provisioning and hostname can then be requested again", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const first = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "reusable.example.com" }
+  }), f.env, { waitUntil() {} });
+  assert.equal(first.status, 201);
+  const firstBody = await first.json();
+  const removed = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + firstBody.domain_id, {
+    method: "DELETE"
+  }), f.env, { waitUntil() {} });
+  assert.equal(removed.status, 200);
+  assert.equal((await removed.json()).status, "removed");
+  assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(firstBody.domain_id).get().status, "removed");
+  const second = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "reusable.example.com" }
+  }), f.env, { waitUntil() {} });
+  assert.equal(second.status, 201);
+  assert.notEqual((await second.json()).domain_id, firstBody.domain_id);
+});
+
+test("dashboard renders custom-domain controls in each supported locale", async () => {
+  const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
+  assert.match(source, /id="domain-form"/);
+  assert.match(source, /id="domain-business"/);
+  assert.match(source, /\/api\/v1\/businesses\/\+encodeURIComponent\(selectedDomainBusinessId\)\+"\/domains"/);
+  assert.match(source, /Cloudflare confirms it and its SSL status/);
+  assert.match(source, /Tên miền chỉ hoạt động khi Cloudflare xác nhận tên miền và SSL/);
+});
