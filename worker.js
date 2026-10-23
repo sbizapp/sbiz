@@ -4,12 +4,12 @@
  * Owner deploys manually from Cloudflare Dashboard. No credentials are embedded here.
  */
 import { connect } from "cloudflare:sockets";
+
 /**
  * [EMAIL][SMTP][START]
  * Yandex SMTP over Cloudflare Workers TCP sockets (implicit TLS on port 465).
  * Configure SMTP_HOST, SMTP_PORT, SMTP_USER_NOREPLY and secret SMTP_PASSWORD_NOREPLY.
  */
-import { connect } from "cloudflare:sockets";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -212,8 +212,7 @@ async function verifyCloudflareAccess(request, env) {
  * SBiz MOD-01: registration, authentication and business traceability.
  * All database writes use the SBIZ_APP_DB D1 binding.
  */
-import { sendMail } from "../shared/smtp-mailer.js";
-import { verifyCloudflareAccess } from "../shared/cloudflare-access.js";
+
 
 const LANGUAGES = new Set(["en", "vi", "id", "es", "pt"]);
 const RESERVED_SLUGS = new Set([
