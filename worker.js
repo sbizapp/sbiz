@@ -546,9 +546,14 @@ async function updateBusinessSlug(request, env, businessId) {
   const conflict = await db.prepare("SELECT business_id FROM businesses WHERE current_slug=? COLLATE NOCASE AND business_id<>?").bind(slug, businessId).first();
   if (conflict) return json({ error: "SLUG_UNAVAILABLE" }, 409);
   const now = nowIso();
+  const changeSource = admin ? "admin" : "owner";
   await db.batch([
     db.prepare("UPDATE businesses SET current_slug=? WHERE business_id=?").bind(slug, businessId),
-    db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value) VALUES (?,?, 'slug_changed',?,?,?,?)").bind(uuid(), businessId, now, account.account_id, business.current_slug, slug)
+    db.prepare("UPDATE business_slug_history SET valid_to=? WHERE business_id=? AND valid_to IS NULL").bind(now, businessId),
+    db.prepare("INSERT INTO business_slug_history (slug_history_id,business_id,slug,valid_from,valid_to,changed_by_account_id,change_source) VALUES (?,?,?,?,NULL,?,?)")
+      .bind(uuid(), businessId, slug, now, account.account_id, changeSource),
+    db.prepare("INSERT INTO business_events (event_id,business_id,event_type,occurred_at,actor_account_id,old_value,new_value,metadata_json) VALUES (?,?, 'slug_changed',?,?,?,?,?)")
+      .bind(uuid(), businessId, now, account.account_id, business.current_slug, slug, JSON.stringify({ changeSource }))
   ]);
   return json({ ok: true, business_id: businessId, slug });
 }
