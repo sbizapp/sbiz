@@ -47,17 +47,17 @@ These are code and repository changes only. The new migration has **not** been a
 
 - Source and configuration review: **performed**.
 - Slug-history migration and code hooks: **added; migration/backfill and update SQL shape smoke-tested against a minimal local SQLite schema; not executed against D1**.
-- Owner ran the full `npm test` on branch `cleanup/repository-organization-2026-10-23`, exact HEAD `3aeb3c6496c0d095a9cd1f60b528d60e2ffd54a3`. Reported result: `npm run check` passed; slug-history contract tests 7/7 passed; Cloudflare Access tests 17/17 passed; SQLite-backed D1 behavior tests 6/6 passed. **Total: 30/30 tests passed** across the four checks in the `npm test` sequence. The Node experimental-loader deprecation warning appeared but did not fail tests.
-- The D1 behavior suite covers `/api/v1/me`, owner-only L1 updates, audit-event persistence, slug-history updates, slug conflict non-mutation, and invalid-language rejection. Additional tests were committed at HEAD `e91bb4e6003138c01b8b933d178c1e1f1528eab1` for invalid registration slug, SMTP-send failure cleanup, expired registration token, successful registration record creation, and one-time token replay rejection. **These new tests have not yet been run by the owner; test status for the new HEAD is pending.** The previous 30/30 PASS result applies only to HEAD `3aeb3c6496c0d095a9cd1f60b528d60e2ffd54a3`.
+- Owner ran `npm test` on exact HEAD `3921c4bb8f1a6a484f1c7d1fe1d08e6ab785666f` on branch `cleanup/repository-organization-2026-10-23`. Reported result: syntax checks passed; slug-history tests 7/7; Cloudflare Access tests 17/17; SQLite-backed D1 behavior tests 10/10. **Total: 34/34 tests passed** across the four checks. The Node experimental-loader deprecation warning appeared but did not fail tests.
+- The D1 behavior suite covers `/api/v1/me`, owner-only L1 updates, audit-event persistence, slug-history updates, slug conflict non-mutation, invalid-language rejection, invalid registration slug, SMTP-send failure cleanup, expired registration token, successful registration record creation, and one-time token replay rejection. This is owner-reported local test evidence at the exact HEAD above. It does not verify Cloudflare live runtime, SMTP delivery, remote D1 parity, migration application, or production deployment.
 - Live SMTP, Cloudflare Access policy, D1 schema parity, R2, cron and HTTP runtime checks: **not verified**.
 - Migration `0002_mod01_business_slug_history.sql` has **not** been applied to remote D1.
 - Production readiness / MOD01 acceptance: **NOT ESTABLISHED**.
 
 ## 5. Safe next execution order
 
-1. **Completed:** owner ran `npm test` on exact HEAD `3aeb3c6496c0d095a9cd1f60b528d60e2ffd54a3`; all 30 tests passed.
-2. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
-3. Add behavioral D1 tests for registration completion, email/token failure paths, and race/failure cases where they can be tested safely without production resources.
+1. **Completed:** owner ran `npm test` on exact HEAD `3921c4bb8f1a6a484f1c7d1fe1d08e6ab785666f`; all 34 tests passed.
+2. Continue adding safe SQLite-backed behavior coverage for password-reset/session revocation and email-change one-time-token behavior before making those flows production claims.
+3. Review migration history and the intended D1 target; apply migration 0002 only after the owner explicitly approves the remote migration. Do not deploy code that references `business_slug_history` before the table exists.
 4. Expand the dashboard into the full subscription-aware control center only when the authoritative subscription/entitlement rules and corresponding approved segment scenario are ready.
 5. Implement remaining MOD01 requirements in dependency order: language routing, safe slug resolver, custom-domain lifecycle, subscription history ingestion, and retention/purge behavior, without inventing unresolved product rules.
 6. Owner verifies Cloudflare Access policy, secrets, bindings and live runtime. Deployment and remote migrations remain owner-controlled.
