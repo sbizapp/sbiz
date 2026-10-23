@@ -1,7 +1,7 @@
 # SBIZ.APP — HỒ SƠ CẤU HÌNH HẠ TẦNG
 
-**Ngày cập nhật:** 2026-10-22  
-**Trạng thái:** Ghi nhận thông tin do chủ sản phẩm xác nhận. KV namespace, R2 bucket và D1 database đã được tạo theo thông tin Dashboard. Chủ sản phẩm đã xác nhận Worker `sbiz-app` phản hồi thành công qua `https://sbiz.app/health`; mã nguồn đang được chuyển sang cấu trúc nhiều file với Wrangler.
+**Ngày cập nhật:** 2026-10-23  
+**Trạng thái hiện tại đã kiểm tra:** Cloudflare Workers & Pages có một Worker tên `sbiz`, gắn với `sbiz.app`. `wrangler.jsonc` trên branch `feature/mod01-cloudflare-access-admin` đã được chỉnh để nhắm đúng tên `sbiz`. Cloudflare Access app `sbiz.app` và policy `SBiz Admin Owner` đã được tạo; Production có `CF_ACCESS_TEAM_DOMAIN` và `CF_ACCESS_AUD`. Đăng nhập Access chuyển hướng và quay lại hoạt động trong trình duyệt. Tuy nhiên, `/admin` và `/api/v1/admin/businesses` trên Production trả `{"error":"Not Found"}`; chưa xác nhận mã branch hiện tại đã được deploy lên Worker. Không coi production là đã hoàn tất cho tới khi owner deploy có chủ đích và xác minh runtime.
 
 ## 1. Thông tin đã xác nhận
 
@@ -22,7 +22,7 @@
 - KV Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp từ Instance details; chưa xác minh qua API).
 - Email đăng nhập/tài khoản Cloudflare được cung cấp: `admin@vinarubber.com`.
 - Cloudflare Account ID: `7568b3c0e09d949e021c486fa8199b63`.
-- Workers.dev subdomain hiển thị trong Account details: `sbizapp.workers.dev` (chỉ ghi nhận; chưa khẳng định đã tạo Worker ứng dụng).
+- Workers.dev subdomain hiển thị trong Account details: `sbizapp.workers.dev`.
 - Zone ID của `sbiz.app`: `e2b836a598a4e275aeaa000ece31bc28` (do chủ sản phẩm cung cấp; chưa xác minh trực tiếp qua API).
 - Account ID: `7568b3c0e09d949e021c486fa8199b63` (do chủ sản phẩm cung cấp; chưa xác minh trực tiếp qua API).
 - Nameservers cụ thể và trạng thái zone trong Cloudflare Dashboard: chưa được cung cấp; ghi nhận riêng rằng domain đang theo cấu hình DNS mặc định Cloudflare.
@@ -89,8 +89,8 @@ Các ID sau không phải bí mật và có thể ghi vào Git sau khi xác minh
 - Domain registration status: `Active`; expiry: `2027-10-19`.
 - DNS đang theo cấu hình mặc định Cloudflare theo xác nhận của chủ sản phẩm; chưa kiểm tra từng record hoặc nameserver cụ thể.
 - KV namespace: `SBIZ_APP_KV`; Namespace ID: `f5c12871f3204a7588cd18b3dfca689a` (do chủ sản phẩm cung cấp).
-- Tên Worker đề xuất cho bước bootstrap: `sbiz-app` (chưa tạo trên Cloudflare; chờ chủ sản phẩm tạo thủ công).
-- Mã nguồn bootstrap: `worker.js` trong repository; endpoint `GET /health` chỉ phục vụ smoke test, chưa có chức năng sản phẩm.
+- Tên Worker thực tế trên Cloudflare Dashboard: `sbiz` (đã xác nhận ngày 2026-10-23). `wrangler.jsonc` phải giữ `name: "sbiz"`; không đổi sang `sbiz-app`.
+- Mã nguồn hiện tại: `worker.js` entry point cùng router/module trong branch `feature/mod01-cloudflare-access-admin`. Production endpoint `/health` cần được kiểm tra lại sau lần deploy từ branch này.
 - Binding names dự kiến khi cấu hình ứng dụng: `SBIZ_APP_KV` (KV), `SBIZ_APP_R2` (R2 bucket `sbiz-app-assets`), `SBIZ_APP_DB` (D1 database `sbiz-app-db`). Các binding chưa được cấu hình và bootstrap hiện tại chưa sử dụng chúng.
 - Môi trường dự kiến: development, staging, production.
 - R2 bucket đã tạo: `sbiz-app-assets`; location `Asia-Pacific (APAC)`; default storage class `Standard`.
@@ -174,8 +174,8 @@ Tài liệu chính thức về Worker variables/secrets:
 - [ ] Account ID, Zone ID và trạng thái zone được xác minh trực tiếp trên dashboard/API.
 - [x] Ghi nhận trạng thái ban đầu: chưa có ứng dụng Worker.
 - [x] Mã nguồn bootstrap `worker.js` đã được lưu trong GitHub; chưa triển khai trên Cloudflare.
-- [ ] Chủ sản phẩm tạo Worker `sbiz-app` trong Dashboard, dán `worker.js` và tự bấm Deploy.
-- [ ] Kiểm thử `GET /health` sau deploy và ghi nhận kết quả.
+- [x] Worker `sbiz` đã tồn tại trên Cloudflare Dashboard; Wrangler deployment history đã được đọc bằng `npx wrangler deployments list --name sbiz`.
+- [ ] Sau khi owner deploy branch đã đồng bộ, kiểm thử `GET /health`, `/admin`, và `/api/v1/admin/businesses`; lưu kết quả runtime.
 - [ ] Cấu hình bindings KV/R2/D1 sau khi Worker bootstrap được xác minh.
 - [x] D1 database `sbiz-app-db` đã được chủ sản phẩm xác nhận tạo; ID `8106266b-a132-4ccc-bce8-b386c027a8f7`.
 - [x] Dashboard D1 hiển thị 0 tables và chưa có dữ liệu ứng dụng.
