@@ -300,6 +300,13 @@ test("Admin page follows the minimal white UI standard", async () => {
     assert.match(page, /input,select,textarea\{[^}]*background:#fff[^}]*border:1px solid #e5e7eb/);
     assert.match(page, /table\{[^}]*background:#fff/);
     assert.match(page, /th,td\{[^}]*background:#fff/);
+    assert.match(page, /color-scheme:light/);
+    assert.match(page, /header\{[^}]*background:#fff[^}]*border-bottom:1px solid #e5e7eb/);
+    assert.match(page, /\.panel,\.detail\{[^}]*background:#fff[^}]*box-shadow:0 1px 2px rgba\(0,0,0,\.05\)/);
+    assert.match(page, /\.panel-head\{[^}]*background:#fff[^}]*border-bottom:1px solid #e5e7eb/);
+    assert.match(page, /\.table-wrap\{[^}]*background:#fff/);
+    assert.match(page, /input,select,textarea\{[^}]*background:#fff[^}]*border:1px solid #e5e7eb/);
+    assert.match(page, /button:hover,\.button:hover,button\.secondary:hover\{[^}]*border-color:#9ca3af/);
     assert.match(page, /button:focus-visible,\.button:focus-visible\{outline:2px solid #9ca3af/);
     assert.doesNotMatch(page, /backdrop-filter|--glass|linear-gradient|prefers-color-scheme:dark/);
     assert.doesNotMatch(page, /background[^;]*url\(["']?\/assets\/background-/);
