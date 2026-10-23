@@ -526,7 +526,7 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
       providerCalls++;
       if (init.method === "POST") {
         assert.match(init.body, /"method":"txt"/);
-        return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "pending_validation", ownership_verification: { name: "_cf-custom-hostname.secure.example.com", type: "txt", value: "provider-token" }, ssl: { status: "pending_issuance", validation_records: [{ txt_name: "_acme-challenge.secure.example.com", txt_value: "ssl-token" }] } } }), {
+        return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "pending", ownership_verification: { name: "_cf-custom-hostname.secure.example.com", type: "txt", value: "provider-token" }, ssl: { status: "pending_issuance", validation_records: [{ txt_name: "_acme-challenge.secure.example.com", txt_value: "ssl-token" }] } } }), {
           status: 200, headers: { "content-type": "application/json" }
         });
       }
@@ -544,7 +544,7 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     assert.equal(response.status, 202);
     const pending = await response.json();
     assert.equal(pending.status, "pending_validation");
-    assert.equal(pending.provider_status, "pending_validation");
+    assert.equal(pending.provider_status, "pending");
     assert.equal(pending.ssl_status, "pending_issuance");
     assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get().status, "pending_validation");
 
