@@ -68,6 +68,7 @@ async function fixture({ role = "owner" } = {}) {
   const db = new SQLiteD1();
   db.exec(await readFile(new URL("../migrations/0001_mod01_account_business_traceability.sql", import.meta.url), "utf8"));
   db.exec(await readFile(new URL("../migrations/0002_mod01_business_slug_history.sql", import.meta.url), "utf8"));
+  db.exec(await readFile(new URL("../migrations/0003_mod01_custom_domain_lifecycle.sql", import.meta.url), "utf8"));
   db.prepare("INSERT INTO accounts (account_id,email,password_hash,email_verified_at,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
     .bind("account-owner", "owner@example.test", "not-used", now, "active", now, now).run();
   db.prepare("INSERT INTO accounts (account_id,email,password_hash,email_verified_at,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
@@ -454,4 +455,122 @@ test("email confirmation rolls back token consumption and account email when aud
   assert.equal(response.status, 503);
   assert.equal(f.db.prepare("SELECT email FROM accounts WHERE account_id=?").bind("account-owner").first().email, "owner@example.test");
   assert.equal(f.db.prepare("SELECT used_at FROM email_change_requests WHERE change_id=?").bind("atomic-email-change").first().used_at, null);
+});
+
+test("custom domain request is owner-only and returns a one-time DNS TXT challenge", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const response = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "Shop.Example.com." }
+  }), f.env, { waitUntil() {} });
+  assert.equal(response.status, 201);
+  const body = await response.json();
+  assert.equal(body.hostname, "shop.example.com");
+  assert.equal(body.status, "pending_dns");
+  assert.equal(body.dns.type, "TXT");
+  assert.equal(body.dns.name, "_sbiz-verification.shop.example.com");
+  assert.match(body.dns.value, /^sbiz-domain-verification=[A-Za-z0-9_-]{32,}$/);
+  const saved = f.db.prepare("SELECT hostname,status,verification_token_hash,verified_at FROM business_custom_domains WHERE domain_id=?").bind(body.domain_id).get();
+  assert.equal(saved.hostname, "shop.example.com");
+  assert.equal(saved.status, "pending_dns");
+  assert.equal(saved.verified_at, null);
+  assert.equal(saved.verification_token_hash, await hashToken(body.dns.value.slice("sbiz-domain-verification=".length)));
+  assert.notEqual(saved.verification_token_hash, body.dns.value.slice("sbiz-domain-verification=".length));
+
+  const duplicate = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "shop.example.com" }
+  }), f.env, { waitUntil() {} });
+  assert.equal(duplicate.status, 409);
+});
+
+test("custom domain rejects internal SBiz hostnames, malformed hosts, and non-owners", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  for (const hostname of ["sbiz.app", "admin.sbiz.app", "localhost", "127.0.0.1", "shop.example.com/path", "shop.example.com:8443", "-bad.example.com"]) {
+    const response = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+      method: "POST", body: { hostname }
+    }), f.env, { waitUntil() {} });
+    assert.equal(response.status, 400, hostname);
+  }
+  const memberFixture = await fixture({ role: "member" });
+  t.after(memberFixture.close);
+  const denied = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "shop.example.com" }
+  }), memberFixture.env, { waitUntil() {} });
+  assert.equal(denied.status, 403);
+});
+
+test("custom hostname is active only after DNS proof and Cloudflare confirms active SSL", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const created = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "secure.example.com" }
+  }), f.env, { waitUntil() {} });
+  assert.equal(created.status, 201);
+  const challenge = await created.json();
+  const token = challenge.dns.value.slice("sbiz-domain-verification=".length);
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input);
+    if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
+      return new Response(JSON.stringify({ Answer: [{ type: 16, data: '"sbiz-domain-verification=' + token + '"' }] }), {
+        status: 200, headers: { "content-type": "application/dns-json" }
+      });
+    }
+    if (url.includes("/custom_hostnames")) {
+      providerCalls++;
+      assert.equal(init.method, "POST");
+      return new Response(JSON.stringify({ success: true, result: { id: "cf-hostname-1", hostname: "secure.example.com", status: "active", ssl: { status: "active" } } }), {
+        status: 200, headers: { "content-type": "application/json" }
+      });
+    }
+    throw new Error("Unexpected external request in test: " + url);
+  };
+  try {
+    const response = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
+      method: "POST", body: {}
+    }), { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" }, { waitUntil() {} });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.status, "active");
+    assert.equal(body.provider_status, "active");
+    assert.equal(body.ssl_status, "active");
+    assert.equal(providerCalls, 1);
+    const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    assert.equal(saved.status, "active");
+    assert.equal(saved.provider_hostname_id, "cf-hostname-1");
+    assert.ok(saved.verified_at);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("DNS verification without Cloudflare for SaaS configuration never marks a hostname active", async t => {
+  const f = await fixture();
+  t.after(f.close);
+  const created = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
+    method: "POST", body: { hostname: "pending.example.com" }
+  }), f.env, { waitUntil() {} });
+  const challenge = await created.json();
+  const token = challenge.dns.value.slice("sbiz-domain-verification=".length);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async input => {
+    assert.ok(String(input).startsWith("https://cloudflare-dns.com/dns-query"));
+    return new Response(JSON.stringify({ Answer: [{ type: 16, data: '"sbiz-domain-verification=' + token + '"' }] }), { status: 200 });
+  };
+  try {
+    const response = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
+      method: "POST", body: {}
+    }), f.env, { waitUntil() {} });
+    assert.equal(response.status, 503);
+    const body = await response.json();
+    assert.equal(body.error, "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED");
+    const saved = f.db.prepare("SELECT status,verified_at,provider_hostname_id FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    assert.equal(saved.status, "pending_provider");
+    assert.ok(saved.verified_at);
+    assert.equal(saved.provider_hostname_id, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
