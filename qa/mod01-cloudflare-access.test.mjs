@@ -272,3 +272,29 @@ test("Worker admits a valid Access JWT to the protected admin API", async () => 
     assert.deepEqual(await response.json(), { businesses: [] });
   });
 });
+
+test("Admin page exposes the approved Liquid Glass styling in light and dark themes", async () => {
+  await withMockAccessJwks(async () => {
+    const token = await makeAccessToken();
+    const response = await worker.fetch(
+      new Request("https://sbiz.app/admin", {
+        headers: { "cf-access-jwt-assertion": token },
+      }),
+      {
+        ...accessTestEnv(),
+        SBIZ_APP_R2: {
+          async get() { return null; },
+        },
+      },
+      { waitUntil() {} },
+    );
+    assert.equal(response.status, 200);
+    const page = await response.text();
+    assert.match(page, /--glass-surface:rgba\(255,255,255,\.75\)/);
+    assert.match(page, /backdrop-filter:blur\(var\(--glass-blur\)\) saturate\(140%\)/);
+    assert.match(page, /\.panel:before,\.detail:before/);
+    assert.match(page, /@media\(prefers-color-scheme:dark\)/);
+    assert.match(page, /@media\(max-width:600px\)/);
+    assert.match(page, /prefers-reduced-motion:reduce/);
+  });
+});
