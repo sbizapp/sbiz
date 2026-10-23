@@ -437,3 +437,17 @@ export async function routeMod01(request, env) {
   return null;
 }
 /* [MOD01][BACKEND][END] */
+
+export async function cleanupMod01(env) {
+  const db = env.SBIZ_APP_DB;
+  if (!db) throw new Error("D1 binding SBIZ_APP_DB is missing");
+  const now = nowIso();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  await db.batch([
+    db.prepare("DELETE FROM registration_requests WHERE expires_at<=?").bind(now),
+    db.prepare("DELETE FROM email_change_requests WHERE expires_at<=? OR used_at IS NOT NULL").bind(now),
+    db.prepare("DELETE FROM password_reset_tokens WHERE expires_at<=? OR used_at IS NOT NULL").bind(now),
+    db.prepare("DELETE FROM auth_sessions WHERE expires_at<=? OR revoked_at IS NOT NULL").bind(cutoff),
+    db.prepare("DELETE FROM email_rate_limits WHERE window_started_at<=?").bind(cutoff)
+  ]);
+}
