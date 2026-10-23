@@ -268,9 +268,11 @@ async function resetPassword(request, env) {
   if (!row) return json({ error: "RESET_EXPIRED", message: "This reset link is invalid or expired. Request a new link." }, 410);
   const hash = await passwordHash(password);
   const now = nowIso();
+  const consumed = await db.prepare("UPDATE password_reset_tokens SET used_at=? WHERE reset_id=? AND used_at IS NULL AND expires_at>? RETURNING reset_id")
+    .bind(now, row.reset_id, now).first();
+  if (!consumed) return json({ error: "RESET_EXPIRED", message: "This reset link has already been used or expired." }, 410);
   await db.batch([
     db.prepare("UPDATE accounts SET password_hash=?,updated_at=? WHERE account_id=?").bind(hash, now, row.account_id),
-    db.prepare("UPDATE password_reset_tokens SET used_at=? WHERE reset_id=? AND used_at IS NULL").bind(now, row.reset_id),
     db.prepare("UPDATE auth_sessions SET revoked_at=? WHERE account_id=? AND revoked_at IS NULL").bind(now, row.account_id)
   ]);
   return json({ ok: true, message: "Password reset. Please log in with your new password." });
