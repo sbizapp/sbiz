@@ -470,7 +470,7 @@ test("custom domain request is owner-only and returns a one-time DNS TXT challen
   assert.equal(body.dns.type, "TXT");
   assert.equal(body.dns.name, "_sbiz-verification.shop.example.com");
   assert.match(body.dns.value, /^sbiz-domain-verification=[A-Za-z0-9_-]{32,}$/);
-  const saved = f.db.prepare("SELECT hostname,status,verification_token_hash,verified_at FROM business_custom_domains WHERE domain_id=?").bind(body.domain_id).get();
+  const saved = f.db.prepare("SELECT hostname,status,verification_token_hash,verified_at FROM business_custom_domains WHERE domain_id=?").bind(body.domain_id).first();
   assert.equal(saved.hostname, "shop.example.com");
   assert.equal(saved.status, "pending_dns");
   assert.equal(saved.verified_at, null);
@@ -547,14 +547,14 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     assert.equal(pending.status, "pending_validation");
     assert.equal(pending.provider_status, "pending");
     assert.equal(pending.ssl_status, "pending_issuance");
-    assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get().status, "pending_validation");
+    assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).first().status, "pending_validation");
 
     const routingPending = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id + "/verify", {
       method: "POST", body: {}
     }), { ...f.env, CLOUDFLARE_API_TOKEN: "test-only-token", CLOUDFLARE_ZONE_ID: "test-zone-id" }, { waitUntil() {} });
     assert.equal(routingPending.status, 202);
     assert.equal((await routingPending.json()).status, "pending_deployment");
-    const notYetActive = f.db.prepare("SELECT status,routing_verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    const notYetActive = f.db.prepare("SELECT status,routing_verified_at FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).first();
     assert.equal(notYetActive.status, "pending_deployment");
     assert.equal(notYetActive.routing_verified_at, null);
 
@@ -568,7 +568,7 @@ test("custom hostname is active only after DNS proof and Cloudflare confirms act
     assert.equal(body.ssl_status, "active");
     assert.equal(providerCalls, 3);
     assert.equal(cnameCalls, 2);
-    const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at,routing_verified_at,provider_validation_json,ssl_validation_json,cname_target FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    const saved = f.db.prepare("SELECT status,provider_hostname_id,verified_at,routing_verified_at,provider_validation_json,ssl_validation_json,cname_target FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).first();
     assert.equal(saved.status, "active");
     assert.equal(saved.provider_hostname_id, "cf-hostname-1");
     assert.ok(saved.verified_at);
@@ -606,7 +606,7 @@ test("DNS verification without Cloudflare for SaaS configuration never marks a h
     assert.equal(response.status, 503);
     const body = await response.json();
     assert.equal(body.error, "CUSTOM_DOMAIN_PROVIDER_NOT_CONFIGURED");
-    const saved = f.db.prepare("SELECT status,verified_at,provider_hostname_id FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    const saved = f.db.prepare("SELECT status,verified_at,provider_hostname_id FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).first();
     assert.equal(saved.status, "pending_provider");
     assert.ok(saved.verified_at);
     assert.equal(saved.provider_hostname_id, null);
@@ -628,7 +628,7 @@ test("custom domain can be removed before provider provisioning and hostname can
   }), f.env, { waitUntil() {} });
   assert.equal(removed.status, 200);
   assert.equal((await removed.json()).status, "removed");
-  assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(firstBody.domain_id).get().status, "removed");
+  assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(firstBody.domain_id).first().status, "removed");
   const second = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains", {
     method: "POST", body: { hostname: "reusable.example.com" }
   }), f.env, { waitUntil() {} });
@@ -683,7 +683,7 @@ test("custom domain removal requires provider confirmation before marking remove
       method: "DELETE"
     }), env, { waitUntil() {} });
     assert.equal(failedDelete.status, 503);
-    assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get().status, "error");
+    assert.equal(f.db.prepare("SELECT status FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).first().status, "error");
     const deleted = await worker.fetch(authenticatedRequest("/api/v1/businesses/sbiz-000000001/domains/" + challenge.domain_id, {
       method: "DELETE"
     }), env, { waitUntil() {} });
@@ -723,7 +723,7 @@ test("custom hostname is not provisioned until the Cloudflare fallback origin is
     assert.equal(response.status, 503);
     assert.equal((await response.json()).error, "FALLBACK_ORIGIN_NOT_ACTIVE");
     assert.equal(createCalls, 0);
-    const saved = f.db.prepare("SELECT status,error_code,provider_hostname_id FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).get();
+    const saved = f.db.prepare("SELECT status,error_code,provider_hostname_id FROM business_custom_domains WHERE domain_id=?").bind(challenge.domain_id).first();
     assert.equal(saved.status, "pending_provider");
     assert.equal(saved.error_code, "FALLBACK_ORIGIN_NOT_ACTIVE");
     assert.equal(saved.provider_hostname_id, null);
@@ -741,10 +741,10 @@ test("scheduled cleanup expires stale custom-domain challenges and preserves a t
   let cleanupPromise;
   await worker.scheduled({ cron: "0 * * * *" }, f.env, { waitUntil(promise) { cleanupPromise = promise; } });
   await cleanupPromise;
-  const saved = f.db.prepare("SELECT status,error_code FROM business_custom_domains WHERE domain_id=?").bind("expired-domain-challenge").get();
+  const saved = f.db.prepare("SELECT status,error_code FROM business_custom_domains WHERE domain_id=?").bind("expired-domain-challenge").first();
   assert.equal(saved.status, "error");
   assert.equal(saved.error_code, "DNS_CHALLENGE_EXPIRED");
-  const event = f.db.prepare("SELECT event_type,new_value,metadata_json FROM business_events WHERE business_id=? AND event_type='custom_domain_verification_expired'").bind("sbiz-000000001").get();
+  const event = f.db.prepare("SELECT event_type,new_value,metadata_json FROM business_events WHERE business_id=? AND event_type='custom_domain_verification_expired'").bind("sbiz-000000001").first();
   assert.ok(event);
   assert.equal(event.new_value, "expired.example.com");
   assert.match(event.metadata_json, /expired-domain-challenge/);
